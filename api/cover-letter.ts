@@ -9,8 +9,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const authRequest = await clerkClient.authenticateRequest(req as any);
-    const auth = authRequest.toAuth();
-    const userId = (auth as any)?.userId;
+    const { userId } = authRequest.toAuth() as any;
+    
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
     const { title, company, description, resume, name, email } = req.body;
@@ -27,7 +27,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         
         CANDIDATE: ${name} (${email})
         RESUME: ${resume}
-        JOB DESCRIPTION: ${description}
+        Job Description: ${description}
         
         INSTRUCTIONS:
         - Match skills to the specific requirements listed in the job description.

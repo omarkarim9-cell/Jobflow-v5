@@ -8,32 +8,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
   try {
-    // Fixed: authenticateRequest returns a RequestState. userId is accessible via the toAuth() method. 
-    // req is cast as any to bypass VercelRequest type assignment errors.
-    const { userId } = (await clerkClient.authenticateRequest(req as any)).toAuth();
+    const authRequest = await clerkClient.authenticateRequest(req as any);
+    const { userId } = authRequest.toAuth() as any;
+    
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-    const { title, company, description, resume, email } = req.body;
+    const { title, company, description, resume, name, email } = req.body;
     if (!title || !description || !resume) return res.status(400).json({ error: 'Missing required fields' });
 
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const isPlaceholder = !company || 
+        company.toLowerCase().includes("review") || 
+        company.toLowerCase().includes("unknown");
+
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
-      contents: `Tailor this resume for a ${title} role at ${company || 'your company'}. 
-        Email: ${email}. 
-        Resume: ${resume}
+      contents: `Write a professional, high-impact cover letter for the ${title} position at ${isPlaceholder ? 'your company' : company}.
+        
+        CANDIDATE: ${name} (${email})
+        RESUME: ${resume}
         Job Description: ${description}
         
-        TASK:
-        Rewrite bullet points to emphasize relevant experience for the specific role. Ensure the contact information is updated correctly. Keep the layout professional and text-based. Do not include placeholders.`,
+        INSTRUCTIONS:
+        - Match skills to the specific requirements listed in the job description.
+        - Maintain a professional, confident, and persuasive tone.
+        - ABSOLUTELY NO placeholders like [Company Name] or [Job Title]. Use the data provided.`,
       config: {
-        systemInstruction: "You are a professional resume writer specializing in ATS optimization and role-specific tailoring."
+        systemInstruction: "You are an expert career coach writing professional, ATS-optimized cover letters that stand out."
       }
     });
 
     return res.status(200).json({ text: response.text || "" });
   } catch (error: any) {
-    console.error('[API/TAILOR-RESUME] Error:', error.message);
+    console.error('[API/COVER-LETTER] Error:', error.message);
     return res.status(500).json({ error: 'Internal Server Error' });
   }
 }
