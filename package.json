@@ -1,85 +1,33 @@
-@tailwind ba@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-body { 
-  font-family: 'Inter', sans-serif; 
-}
-
-::-webkit-scrollbar { 
-  width: 6px; 
-  height: 6px; 
-}
-
-::-webkit-scrollbar-track { 
-  background: #f1f5f9; 
-}
-
-::-webkit-scrollbar-thumb { 
-  background: #cbd5e1; 
-  border-radius: 3px; 
-}
-
-::-webkit-scrollbar-thumb:hover { 
-  background: #94a3b8; 
-}
-
-.cl-rootBox { 
-  width: 100%; 
-}
-
-.cl-card { 
-  box-shadow: none !important; 
-  border: 1px solid #e2e8f0 !important; 
-}
-
-/* Custom Scrollbar for specific containers */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #e2e8f0;
-}se;
-@tailwind components;
-@tailwind utilities;
-
-body { 
-  font-family: 'Inter', sans-serif; 
-}
-
-::-webkit-scrollbar { 
-  width: 6px; 
-  height: 6px; 
-}
-
-::-webkit-scrollbar-track { 
-  background: #f1f5f9; 
-}
-
-::-webkit-scrollbar-thumb { 
-  background: #cbd5e1; 
-  border-radius: 3px; 
-}
-
-::-webkit-scrollbar-thumb:hover { 
-  background: #94a3b8; 
-}
-
-.cl-rootBox { 
-  width: 100%; 
-}
-
-.cl-card { 
-  box-shadow: none !important; 
-  border: 1px solid #e2e8f0 !important; 
-}
-
-/* Custom Scrollbar for specific containers */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #e2e8f0;
+{
+  "name": "jobflow-ai-v2",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@clerk/clerk-react": "^5.21.0",
+    "@clerk/backend": "^1.19.1",
+    "@google/genai": "^1.30.0",
+    "@neondatabase/serverless": "0.10.4",
+    "lucide-react": "^0.460.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^2.13.3"
+  },
+  "devDependencies": {
+    "vite": "^5.4.8",
+    "@vitejs/plugin-react": "^4.3.1",
+    "typescript": "^5.5.3",
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.1",
+    "@types/node": "^20.11.0",
+    "@vercel/node": "^3.0.0",
+    "tailwindcss": "^3.4.1",
+    "postcss": "^8.4.38",
+    "autoprefixer": "^10.4.19"
+  }
 }
