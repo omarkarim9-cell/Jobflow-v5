@@ -11,9 +11,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     let userId: string | null = null;
     try {
-      // Corrected: Extracting userId from RequestState using toAuth() and casting req as any to bypass VercelRequest/Request type mismatch.
       const authRequest = await clerkClient.authenticateRequest(req as any);
-      userId = authRequest.toAuth().userId;
+      const auth = authRequest.toAuth();
+      userId = (auth as any)?.userId || null;
     } catch (e) {
       console.warn('[API/JOBS] Auth verification failed');
     }

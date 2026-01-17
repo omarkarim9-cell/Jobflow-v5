@@ -8,9 +8,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
   try {
-    // Fixed: authenticateRequest returns a RequestState. userId is accessible via the toAuth() method. 
-    // req is cast as any to bypass VercelRequest type assignment errors.
-    const { userId } = (await clerkClient.authenticateRequest(req as any)).toAuth();
+    const authRequest = await clerkClient.authenticateRequest(req as any);
+    const auth = authRequest.toAuth();
+    const userId = (auth as any)?.userId;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
     const { url } = req.body;
