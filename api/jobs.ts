@@ -1,6 +1,8 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import * as ClerkServer from '@clerk/nextjs/server';
+import { createClerkClient } from '@clerk/backend';
 import { neon } from '@neondatabase/serverless';
+
+const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
@@ -9,11 +11,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     let userId: string | null = null;
     try {
-      const Clerk = (ClerkServer as any).default || ClerkServer;
-      const auth = Clerk.getAuth(req);
-      userId = auth?.userId;
+      // Corrected: Extracting userId from RequestState using toAuth() and casting req as any to bypass VercelRequest/Request type mismatch.
+      const authRequest = await clerkClient.authenticateRequest(req as any);
+      userId = authRequest.toAuth().userId;
     } catch (e) {
-      console.warn('[API/JOBS] Auth context extraction failed.');
+      console.warn('[API/JOBS] Auth verification failed');
     }
 
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
@@ -45,9 +47,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (req.method === 'POST') {
       const body = req.body;
-      if (!body || !body.id) return res.status(400).json({ error: 'Invalid Job Payload: Missing ID' });
+      if (!body || !body.id) return res.status(400).json({ error: 'Invalid Job Payload' });
 
-      // Ensure JSON data is valid and has fallbacks
       const jobData = JSON.stringify({
         location: body.location || '',
         salaryRange: body.salaryRange || '',
@@ -87,12 +88,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         RETURNING *
       `;
       
-      if (!result || result.length === 0) throw new Error("Database insertion for job lead failed.");
       return res.status(200).json({ success: true, job: result[0] });
     }
 
     if (req.method === 'DELETE') {
-      const jobId = req.query.id;
+      const jobId = req.query.id as string;
       if (!jobId) return res.status(400).json({ error: 'Missing Job ID' });
       await sql`DELETE FROM jobs WHERE id = ${jobId} AND user_id = ${userId}`;
       return res.status(200).json({ success: true });
@@ -101,6 +101,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method Not Allowed' });
   } catch (error: any) {
     console.error('[API/JOBS] Error:', error.message);
-    return res.status(500).json({ error: 'Internal Server Error', details: error.message });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 }

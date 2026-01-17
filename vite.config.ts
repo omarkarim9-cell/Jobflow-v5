@@ -7,13 +7,9 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     define: {
-      'process.env': JSON.stringify({
-        API_KEY: env.API_KEY || '',
-        VITE_CLERK_PUBLISHABLE_KEY: env.VITE_CLERK_PUBLISHABLE_KEY || 'pk_test_d2FudGVkLWRpbmdvLTkxLmNsZXJrLmFjY291bnRzLmRldiQ',
-        NODE_ENV: mode
-      }),
+      'process.env.API_KEY': JSON.stringify(env.API_KEY || ''),
+      'process.env.VITE_CLERK_PUBLISHABLE_KEY': JSON.stringify(env.VITE_CLERK_PUBLISHABLE_KEY || 'pk_test_d2FudGVkLWRpbmdvLTkxLmNsZXJrLmFjY291bnRzLmRldiQ'),
       'process.platform': JSON.stringify('browser'),
-      'process.version': JSON.stringify(''),
     },
     build: {
       outDir: 'dist',

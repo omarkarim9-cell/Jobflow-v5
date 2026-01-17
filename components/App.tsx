@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useUser, useAuth, UserButton } from '@clerk/clerk-react';
 import { Job, JobStatus, ViewState, UserProfile, EmailAccount } from '../app-types';
@@ -13,6 +12,10 @@ import { DebugView } from './DebugView';
 import { AddJobModal } from './AddJobModal';
 import { AutomationModal } from './AutomationModal';
 import { NotificationToast, NotificationType } from './NotificationToast';
+import { Analytics } from './Analytics';
+import { Support } from './Support';
+import { Subscription } from './Subscription';
+import { JobMap } from './JobMap';
 import { 
   fetchJobsFromDb, 
   getUserProfile, 
@@ -34,7 +37,11 @@ import {
   Terminal,
   RefreshCw,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  BarChart3,
+  LifeBuoy,
+  CreditCard,
+  Map as MapIcon
 } from 'lucide-react';
 import { JobDetail } from './JobDetail';
 
@@ -178,8 +185,17 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
           <button onClick={() => setCurrentView(ViewState.SELECTED_JOBS)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.SELECTED_JOBS ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><SearchIcon className="w-5 h-5 me-3" /> Scanned Leads</button>
           <button onClick={() => setCurrentView(ViewState.TRACKER)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.TRACKER ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><List className="w-5 h-5 me-3" /> Applications</button>
           <button onClick={() => setCurrentView(ViewState.EMAILS)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.EMAILS ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><Mail className="w-5 h-5 me-3" /> Inbox Scanner</button>
+          
           <div className="my-2 border-t border-slate-100" />
+          <p className="px-3 py-1 text-[10px] font-black uppercase text-slate-400 tracking-widest">Intelligence</p>
+          <button onClick={() => setCurrentView(ViewState.ANALYTICS)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.ANALYTICS ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><BarChart3 className="w-5 h-5 me-3" /> Analytics</button>
+          <button onClick={() => setCurrentView(ViewState.DISCOVERY)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.DISCOVERY ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><MapIcon className="w-5 h-5 me-3" /> Discovery</button>
+          
+          <div className="my-2 border-t border-slate-100" />
+          <p className="px-3 py-1 text-[10px] font-black uppercase text-slate-400 tracking-widest">System</p>
           <button onClick={() => setCurrentView(ViewState.SETTINGS)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.SETTINGS ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><SettingsIcon className="w-5 h-5 me-3" /> Settings</button>
+          <button onClick={() => setCurrentView(ViewState.SUBSCRIPTION)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.SUBSCRIPTION ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><CreditCard className="w-5 h-5 me-3" /> Subscription</button>
+          <button onClick={() => setCurrentView(ViewState.SUPPORT)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.SUPPORT ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><LifeBuoy className="w-5 h-5 me-3" /> Support</button>
           {isOwner && <button onClick={() => setCurrentView(ViewState.DEBUG)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mt-4 ${currentView === ViewState.DEBUG ? 'bg-slate-900 text-white font-bold' : 'text-slate-400 hover:bg-slate-100'}`}><Terminal className="w-5 h-5 me-3" /> Dev Console</button>}
         </div>
         <div className="p-4 border-t border-slate-200">
@@ -227,11 +243,15 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
             {currentView === ViewState.TRACKER && <ApplicationTracker jobs={jobs} onUpdateStatus={async (id, s) => { const job = jobs.find(j => j.id === id); if (job) handleUpdateJob({...job, status: s}); }} onDelete={async (id) => { setJobs(prev => prev.filter(j => j.id !== id)); if (!isDemo) { const token = await getToken(); if (token) await deleteJobFromDb(id, token); } }} onSelect={(j) => setSelectedJobId(j.id)} />}
             {currentView === ViewState.SETTINGS && <div className="h-full p-8 overflow-y-auto"><Settings userProfile={userProfile!} onUpdate={handleUpdateProfile} dirHandle={null} onDirHandleChange={() => {}} jobs={jobs} showNotification={showNotification} onReset={() => signOut()} isOwner={isOwner} /></div>}
             {currentView === ViewState.EMAILS && <div className="h-full p-6"><InboxScanner onImport={(newJobs) => { setJobs(prev => [...newJobs, ...prev]); newJobs.forEach(handleUpdateJob); }} sessionAccount={sessionAccount} onConnectSession={setSessionAccount} onDisconnectSession={() => setSessionAccount(null)} showNotification={showNotification} userPreferences={userProfile?.preferences} resumeContent={userProfile?.resumeContent} /></div>}
+            {currentView === ViewState.ANALYTICS && <div className="h-full p-8 overflow-y-auto"><Analytics jobs={jobs} userProfile={userProfile!} /></div>}
+            {currentView === ViewState.SUPPORT && <Support />}
+            {currentView === ViewState.SUBSCRIPTION && <Subscription userProfile={userProfile!} onUpdateProfile={handleUpdateProfile} showNotification={showNotification} />}
+            {currentView === ViewState.DISCOVERY && <JobMap onImport={(newJobs) => { setJobs(prev => [...newJobs, ...prev]); newJobs.forEach(handleUpdateJob); }} targetRole={userProfile?.preferences?.targetRoles?.[0]} />}
+            {currentView === ViewState.DEBUG && <div className="h-full overflow-y-auto p-8"><DebugView /></div>}
             
             {selectedJobId && currentSelectedJob && (
                 <div className="absolute inset-0 z-50 bg-slate-50 overflow-hidden flex flex-col animate-in slide-in-from-right duration-300 shadow-2xl">
                     <div className="p-4 bg-white border-b border-slate-200 flex items-center justify-between"><div className="flex items-center gap-4"><button onClick={() => setSelectedJobId(null)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500"><X className="w-5 h-5" /></button><span className="text-sm font-bold text-slate-400">/ {currentSelectedJob.company}</span></div><span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border bg-indigo-50 text-indigo-600 border-indigo-100">{currentSelectedJob.status}</span></div>
-                    {/* Fixed: Removed the invalid onUpdateStatus prop from JobDetail component call */}
                     <div className="flex-1 overflow-hidden"><JobDetail job={currentSelectedJob} userProfile={userProfile!} onUpdateJob={handleUpdateJob} onClose={() => setSelectedJobId(null)} showNotification={showNotification} /></div>
                 </div>
             )}

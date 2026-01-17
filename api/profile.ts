@@ -1,7 +1,8 @@
-
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import * as ClerkServer from '@clerk/nextjs/server';
+import { createClerkClient } from '@clerk/backend';
 import { neon } from '@neondatabase/serverless';
+
+const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
@@ -12,11 +13,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     let userId: string | null = null;
     try {
-      const Clerk = (ClerkServer as any).default || ClerkServer;
-      const auth = Clerk.getAuth(req);
-      userId = auth?.userId;
+      // Corrected: Clerk's authenticateRequest returns a RequestState. Use toAuth() to extract the userId 
+      // and cast req as any to resolve type mismatch with VercelRequest.
+      const authRequest = await clerkClient.authenticateRequest(req as any);
+      userId = authRequest.toAuth().userId;
     } catch (e) {
-      console.error('[API/PROFILE] Auth extraction failed.');
+      console.error('[API/PROFILE] Auth verification failed');
     }
 
     if (!userId) {
@@ -49,8 +51,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const prefs = body.preferences || {};
       const accounts = body.connectedAccounts || [];
 
-      // Use a transaction-safe UPSERT
-      // We target 'id' as the primary key constraint
       const result = await sql`
         INSERT INTO profiles (
           id, 
@@ -95,11 +95,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     return res.status(405).json({ error: 'Method Not Allowed' });
   } catch (error: any) {
-    console.error('[API/PROFILE] DB Error:', error.code, error.message);
-    // Handle conflict errors gracefully
-    if (error.code === '23505') {
-        return res.status(200).json({ status: 'conflict_resolved_silently' });
-    }
+    console.error('[API/PROFILE] Error:', error.message);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }

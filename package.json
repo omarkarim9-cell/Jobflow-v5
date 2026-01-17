@@ -1,13 +1,8 @@
-
 {
   "name": "jobflow-ai-v2",
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/omarkarim9-cell/jobflow-ai-v2.git"
-  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -15,14 +10,15 @@
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.21.0",
-    "@clerk/nextjs": "^6.9.6",
+    "@clerk/backend": "^1.19.1",
     "@google/genai": "^1.30.0",
     "@neondatabase/serverless": "0.10.4",
     "lucide-react": "^0.460.0",
-    "next": "^15.1.0",
-    "react": "18.3.1",
-    "react-dom": "18.3.1",
-    "recharts": "^2.13.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^2.13.3"
+  },
+  "devDependencies": {
     "vite": "^5.4.8",
     "@vitejs/plugin-react": "^4.3.1",
     "typescript": "^5.5.3",
