@@ -108,6 +108,7 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     
+    // Only attempt sync if we have a valid session and no profile yet
     if (isLoaded && (isSignedIn || isDemo) && !userProfile) {
         syncData();
     } else if (isLoaded && !isSignedIn && !isDemo) {
@@ -148,7 +149,9 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
   const applyingJob = useMemo(() => jobs.find(j => j.id === applyingJobId), [jobs, applyingJobId]);
   const isResumeMissing = !userProfile?.resumeContent || userProfile.resumeContent.length < 50;
 
-  // Barrier 1: Session Loading
+  // --- RENDERING BARRIERS ---
+
+  // 1. Clerk session loading
   if (!isLoaded) {
     return (
         <div className="h-screen flex flex-col items-center justify-center bg-slate-50">
@@ -158,12 +161,12 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
     );
   }
 
-  // Barrier 2: AUTHENTICATION (The Clerk Login Page is the start)
+  // 2. AUTHENTICATION GATE (Start here if not logged in)
   if (!isSignedIn && !isDemo) {
     return <Auth />;
   }
 
-  // Barrier 3: Identity Sync
+  // 3. User Identity Sync (Profile fetching)
   if (loading && !userProfile && (isSignedIn || isDemo)) {
      return (
         <div className="h-screen flex flex-col items-center justify-center bg-slate-50">
@@ -173,7 +176,7 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
     );
   }
 
-  // Barrier 4: Onboarding
+  // 4. ONBOARDING GATE (New user flow)
   if (!userProfile) {
     return (
         <Onboarding 
@@ -185,6 +188,7 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
     );
   }
 
+  // 5. MAIN APPLICATION
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden" dir={isRtl ? 'rtl' : 'ltr'}>
       {notification && <NotificationToast message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
