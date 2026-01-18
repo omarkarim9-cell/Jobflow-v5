@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useUser, useAuth, UserButton } from '@clerk/clerk-react';
 import { Job, JobStatus, ViewState, UserProfile, EmailAccount } from '../app-types';
@@ -7,19 +6,24 @@ import { JobCard } from './JobCard';
 import { InboxScanner } from './InboxScanner';
 import { Settings } from './Settings';
 import { Auth } from './Auth';
-import { Onboarding } from '.Onboarding';
+import { Onboarding } from './Onboarding';
 import { ApplicationTracker } from './ApplicationTracker';
 import { DebugView } from './DebugView';
 import { AddJobModal } from './AddJobModal';
 import { AutomationModal } from './AutomationModal';
 import { NotificationToast, NotificationType } from './NotificationToast';
+import { Analytics } from './Analytics';
+import { Support } from './Support';
+import { Subscription } from './Subscription';
+import { JobMap } from './JobMap';
+import { UserManual } from './UserManual';
 import { 
   fetchJobsFromDb, 
   getUserProfile, 
   saveUserProfile, 
   saveJobToDb, 
   deleteJobFromDb 
-} from './services/dbService';
+} from '../services/dbService';
 import { 
   LayoutDashboard, 
   Briefcase, 
@@ -34,25 +38,20 @@ import {
   Terminal,
   RefreshCw,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  BarChart3,
+  LifeBuoy,
+  CreditCard,
+  Map as MapIcon,
+  Book
 } from 'lucide-react';
-import { JobDetail } from './components/JobDetail';
+import { JobDetail } from './JobDetail';
 
 const OWNER_EMAIL = 'omar.karim9@gmail.com';
 
-interface AppContentProps {
-  user: any;
-  auth: {
-    getToken: () => Promise<string | null>;
-    signOut: () => void;
-  };
-  isLoaded: boolean;
-  isSignedIn: boolean;
-  isDemo: boolean;
-}
-
-const AppContent: React.FC<AppContentProps> = ({ user, auth, isLoaded, isSignedIn, isDemo }) => {
-  const { getToken, signOut } = auth;
+const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
+  const { user, isLoaded, isSignedIn } = useUser();
+  const { getToken, signOut } = useAuth();
   
   const [loading, setLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -66,6 +65,7 @@ const AppContent: React.FC<AppContentProps> = ({ user, auth, isLoaded, isSignedI
   const [notification, setNotification] = useState<{message: string, type: NotificationType} | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
+  const isSyncLocked = useRef(false);
   const isOwner = user?.primaryEmailAddress?.emailAddress === OWNER_EMAIL || isDemo;
   const isRtl = userProfile?.preferences?.language === 'ar';
 
@@ -74,33 +74,28 @@ const AppContent: React.FC<AppContentProps> = ({ user, auth, isLoaded, isSignedI
   }, []);
 
   const syncData = useCallback(async (isManual: boolean = false) => {
-      if (!navigator.onLine) {
-          showNotification("Offline mode. Database sync paused.", "error");
-          return;
-      }
+      if (!navigator.onLine || isSyncLocked.current) return;
+      
       setIsSyncing(true);
       try {
-          const token = await getToken();
-          if (!token || isDemo) { 
+          const token = isDemo ? 'demo_token' : await getToken();
+          if (!token && !isDemo) { 
               setLoading(false); 
               setIsSyncing(false); 
               return; 
           }
           
-          const profile = await getUserProfile(token);
+          const profile = isDemo ? null : await getUserProfile(token!);
           if (profile) {
               setUserProfile(profile);
-              const dbJobs = await fetchJobsFromDb(token);
+              const dbJobs = await fetchJobsFromDb(token!);
               setJobs(dbJobs);
-          } else {
+          } else if (!isDemo) {
               setUserProfile(null);
           }
-
           if (isManual) showNotification("Workspace synced.", "success");
       } catch (e) {
           console.error("Sync error:", e);
-          setUserProfile(null); 
-          showNotification("Cloud sync unavailable. Working locally.", "error");
       } finally {
           setLoading(false);
           setIsSyncing(false);
@@ -113,9 +108,9 @@ const AppContent: React.FC<AppContentProps> = ({ user, auth, isLoaded, isSignedI
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     
-    if (isLoaded && isSignedIn) {
+    if (isLoaded && (isSignedIn || isDemo) && !userProfile) {
         syncData();
-    } else if (isLoaded) {
+    } else if (isLoaded && !isSignedIn && !isDemo) {
         setLoading(false);
     }
     
@@ -123,37 +118,54 @@ const AppContent: React.FC<AppContentProps> = ({ user, auth, isLoaded, isSignedI
         window.removeEventListener('online', handleOnline);
         window.removeEventListener('offline', handleOffline);
     };
-  }, [isLoaded, isSignedIn, syncData]);
+  }, [isLoaded, isSignedIn, syncData, userProfile, isDemo]);
 
   const handleUpdateJob = useCallback(async (updated: Job) => {
     setJobs(prev => {
-        const updatedJobs = prev.map(j => j.id === updated.id ? updated : j);
-        if (!prev.find(j => j.id === updated.id)) {
-            return [updated, ...prev];
-        }
-        return updatedJobs;
+        const exists = prev.find(j => j.id === updated.id);
+        if (exists) return prev.map(j => j.id === updated.id ? updated : j);
+        return [updated, ...prev];
     });
-    
-    const token = await getToken();
-    if (token && !isDemo) {
-        await saveJobToDb(updated, token);
+    if (!isDemo) {
+      const token = await getToken();
+      if (token) await saveJobToDb(updated, token);
     }
   }, [getToken, isDemo]);
 
   const handleUpdateProfile = useCallback(async (updated: UserProfile) => {
+    isSyncLocked.current = true;
     setUserProfile(updated);
-    const token = await getToken();
-    if (token && !isDemo) {
-        await saveUserProfile(updated, token);
+    if (!isDemo) {
+      const token = await getToken();
+      if (token) {
+          await saveUserProfile(updated, token);
+      }
     }
+    setTimeout(() => { isSyncLocked.current = false; }, 1000);
   }, [getToken, isDemo]);
 
   const currentSelectedJob = useMemo(() => jobs.find(j => j.id === selectedJobId), [jobs, selectedJobId]);
   const applyingJob = useMemo(() => jobs.find(j => j.id === applyingJobId), [jobs, applyingJobId]);
   const isResumeMissing = !userProfile?.resumeContent || userProfile.resumeContent.length < 50;
 
-  if (!isLoaded || (isSignedIn && loading && !userProfile)) {
+  // Barrier 1: Session Loading
+  if (!isLoaded) {
     return (
+        <div className="h-screen flex flex-col items-center justify-center bg-slate-50">
+            <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mb-2"/>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Loading Session...</p>
+        </div>
+    );
+  }
+
+  // Barrier 2: AUTHENTICATION (The Clerk Login Page is the start)
+  if (!isSignedIn && !isDemo) {
+    return <Auth />;
+  }
+
+  // Barrier 3: Identity Sync
+  if (loading && !userProfile && (isSignedIn || isDemo)) {
+     return (
         <div className="h-screen flex flex-col items-center justify-center bg-slate-50">
             <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mb-2"/>
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Syncing Identity...</p>
@@ -161,9 +173,7 @@ const AppContent: React.FC<AppContentProps> = ({ user, auth, isLoaded, isSignedI
     );
   }
 
-  // Auth component handles its own state, so removed unused onLogin and onSwitchToSignup props
-  if (!isSignedIn) return <Auth />;
-
+  // Barrier 4: Onboarding
   if (!userProfile) {
     return (
         <Onboarding 
@@ -190,28 +200,36 @@ const AppContent: React.FC<AppContentProps> = ({ user, auth, isLoaded, isSignedI
             </div>
             <span className="font-bold text-xl text-slate-900 tracking-tight">JobFlow</span>
           </div>
-          {!isDemo ? <UserButton afterSignOutUrl="/" /> : <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-[10px] font-black text-slate-400">DEMO</div>}
+          {!isDemo && <UserButton afterSignOutUrl="/" />}
         </div>
         <div className="flex-1 px-4 py-2 overflow-y-auto custom-scrollbar">
           <button onClick={() => setCurrentView(ViewState.DASHBOARD)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.DASHBOARD ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><LayoutDashboard className="w-5 h-5 me-3" /> Dashboard</button>
           <button onClick={() => setCurrentView(ViewState.SELECTED_JOBS)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.SELECTED_JOBS ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><SearchIcon className="w-5 h-5 me-3" /> Scanned Leads</button>
           <button onClick={() => setCurrentView(ViewState.TRACKER)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.TRACKER ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><List className="w-5 h-5 me-3" /> Applications</button>
           <button onClick={() => setCurrentView(ViewState.EMAILS)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.EMAILS ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><Mail className="w-5 h-5 me-3" /> Inbox Scanner</button>
+          
           <div className="my-2 border-t border-slate-100" />
+          <p className="px-3 py-1 text-[10px] font-black uppercase text-slate-400 tracking-widest">Intelligence</p>
+          <button onClick={() => setCurrentView(ViewState.ANALYTICS)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.ANALYTICS ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><BarChart3 className="w-5 h-5 me-3" /> Analytics</button>
+          <button onClick={() => setCurrentView(ViewState.DISCOVERY)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.DISCOVERY ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><MapIcon className="w-5 h-5 me-3" /> Discovery</button>
+          
+          <div className="my-2 border-t border-slate-100" />
+          <p className="px-3 py-1 text-[10px] font-black uppercase text-slate-400 tracking-widest">System</p>
           <button onClick={() => setCurrentView(ViewState.SETTINGS)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.SETTINGS ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><SettingsIcon className="w-5 h-5 me-3" /> Settings</button>
+          <button onClick={() => setCurrentView(ViewState.SUBSCRIPTION)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.SUBSCRIPTION ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><CreditCard className="w-5 h-5 me-3" /> Subscription</button>
+          <button onClick={() => setCurrentView(ViewState.MANUAL)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.MANUAL ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><Book className="w-5 h-5 me-3" /> User Guide</button>
+          <button onClick={() => setCurrentView(ViewState.SUPPORT)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.SUPPORT ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><LifeBuoy className="w-5 h-5 me-3" /> Support</button>
           {isOwner && <button onClick={() => setCurrentView(ViewState.DEBUG)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mt-4 ${currentView === ViewState.DEBUG ? 'bg-slate-900 text-white font-bold' : 'text-slate-400 hover:bg-slate-100'}`}><Terminal className="w-5 h-5 me-3" /> Dev Console</button>}
         </div>
         <div className="p-4 border-t border-slate-200">
             <button onClick={() => signOut()} className="w-full flex items-center px-3 py-2.5 rounded-lg text-slate-400 hover:text-red-600 font-bold text-xs uppercase tracking-widest">
-                <LogOut className="w-4 h-4 me-3" /> {isDemo ? 'Exit Demo' : 'Sign Out'}
+                <LogOut className="w-4 h-4 me-3" /> Sign Out
             </button>
         </div>
       </aside>
       
       <main className="flex-1 overflow-hidden relative flex flex-col">
         {!isOnline && <div className="bg-amber-500 text-white px-6 py-2 flex items-center justify-between text-[10px] font-black uppercase tracking-widest animate-in slide-in-from-top"><span>Connection lost. Cloud sync paused.</span></div>}
-        {isDemo && <div className="bg-indigo-600 text-white px-6 py-1 text-center text-[9px] font-black uppercase tracking-[0.2em] z-30 shadow-sm">Preview Sandbox Mode: Database Sync Disabled</div>}
-
         <div className="flex-1 overflow-hidden relative">
             {currentView === ViewState.DASHBOARD && (
                 <div className="h-full overflow-y-auto p-8">
@@ -224,21 +242,15 @@ const AppContent: React.FC<AppContentProps> = ({ user, auth, isLoaded, isSignedI
                                 </div>
                                 <div className="text-white">
                                     <h3 className="text-xl font-black uppercase tracking-tight">Complete Your AI Profile</h3>
-                                    <p className="text-sm font-medium opacity-80 mt-1 max-w-lg">Unlock deep intelligence features like document tailoring and interview briefings by uploading your master resume.</p>
+                                    <p className="text-sm font-medium opacity-80 mt-1 max-w-lg">Unlock deep intelligence features by uploading your resume.</p>
                                 </div>
                             </div>
-                            <button 
-                                onClick={() => setCurrentView(ViewState.SETTINGS)} 
-                                className="z-10 px-8 py-4 bg-white text-indigo-600 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-50 transition-all flex items-center gap-2 group/btn"
-                            >
-                                Get Started <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
-                            </button>
+                            <button onClick={() => setCurrentView(ViewState.SETTINGS)} className="z-10 px-8 py-4 bg-white text-indigo-600 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-50 transition-all flex items-center gap-2 group/btn">Get Started <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" /></button>
                         </div>
                     )}
                     <DashboardStats jobs={jobs} userProfile={userProfile!} />
                 </div>
             )}
-            
             {currentView === ViewState.SELECTED_JOBS && (
                 <div className="h-full overflow-y-auto p-8">
                     <div className="flex justify-between items-center mb-8"><h2 className="text-2xl font-black text-slate-900 tracking-tight">Scanned Leads</h2><button onClick={() => setIsAddModalOpen(true)} className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-black text-xs uppercase flex items-center gap-2 shadow-xl"><Plus className="w-4 h-4" /> Add Lead</button></div>
@@ -246,19 +258,34 @@ const AppContent: React.FC<AppContentProps> = ({ user, auth, isLoaded, isSignedI
                         <div className="h-64 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-[2rem] text-slate-400"><SearchIcon className="w-10 h-10 mb-4 opacity-20" /><p className="font-bold text-xs uppercase tracking-widest text-center">No leads found.</p></div>
                     ) : (
                         jobs.filter(j => j.status === JobStatus.DETECTED).map(j => (
-                            <JobCard key={j.id} job={j} onClick={setSelectedJobId.bind(null, j.id)} isSelected={selectedJobId === j.id} isChecked={false} onToggleCheck={() => {}} onAutoApply={(e, job) => setApplyingJobId(job.id)} />
+                            <JobCard key={j.id} job={j} onClick={(job) => setSelectedJobId(job.id)} isSelected={selectedJobId === j.id} isChecked={false} onToggleCheck={() => {}} onAutoApply={(e, job) => setApplyingJobId(job.id)} />
                         ))
                     )}
                 </div>
             )}
-
-            {currentView === ViewState.TRACKER && <ApplicationTracker jobs={jobs} onUpdateStatus={async (id, s) => { const job = jobs.find(j => j.id === id); if (job) handleUpdateJob({...job, status: s}); }} onDelete={async (id) => { setJobs(prev => prev.filter(j => j.id !== id)); const token = await getToken(); if (token && !isDemo) await deleteJobFromDb(id, token); }} onSelect={(j) => setSelectedJobId(j.id)} />}
+            {currentView === ViewState.TRACKER && <ApplicationTracker jobs={jobs} onUpdateStatus={async (id, s) => { const job = jobs.find(j => j.id === id); if (job) handleUpdateJob({...job, status: s}); }} onDelete={async (id) => { setJobs(prev => prev.filter(j => j.id !== id)); if (!isDemo) { const token = await getToken(); if (token) await deleteJobFromDb(id, token); } }} onSelect={(j) => setSelectedJobId(j.id)} />}
             {currentView === ViewState.SETTINGS && <div className="h-full p-8 overflow-y-auto"><Settings userProfile={userProfile!} onUpdate={handleUpdateProfile} dirHandle={null} onDirHandleChange={() => {}} jobs={jobs} showNotification={showNotification} onReset={() => signOut()} isOwner={isOwner} /></div>}
             {currentView === ViewState.EMAILS && <div className="h-full p-6"><InboxScanner onImport={(newJobs) => { setJobs(prev => [...newJobs, ...prev]); newJobs.forEach(handleUpdateJob); }} sessionAccount={sessionAccount} onConnectSession={setSessionAccount} onDisconnectSession={() => setSessionAccount(null)} showNotification={showNotification} userPreferences={userProfile?.preferences} resumeContent={userProfile?.resumeContent} /></div>}
+            {currentView === ViewState.ANALYTICS && <div className="h-full p-8 overflow-y-auto"><Analytics jobs={jobs} userProfile={userProfile!} /></div>}
+            {currentView === ViewState.SUPPORT && <Support />}
+            {currentView === ViewState.SUBSCRIPTION && <Subscription userProfile={userProfile!} onUpdateProfile={handleUpdateProfile} showNotification={showNotification} />}
+            {currentView === ViewState.DISCOVERY && <JobMap onImport={(newJobs) => { setJobs(prev => [...newJobs, ...prev]); newJobs.forEach(handleUpdateJob); }} targetRole={userProfile?.preferences?.targetRoles?.[0]} />}
+            {currentView === ViewState.DEBUG && <div className="h-full overflow-y-auto p-8"><DebugView /></div>}
+            {currentView === ViewState.MANUAL && <UserManual userProfile={userProfile!} />}
             
             {selectedJobId && currentSelectedJob && (
                 <div className="absolute inset-0 z-50 bg-slate-50 overflow-hidden flex flex-col animate-in slide-in-from-right duration-300 shadow-2xl">
-                    <div className="p-4 bg-white border-b border-slate-200 flex items-center justify-between"><div className="flex items-center gap-4"><button onClick={() => setSelectedJobId(null)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500"><X className="w-5 h-5" /></button><span className="text-sm font-bold text-slate-400">/ {currentSelectedJob.company}</span></div><span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border bg-indigo-50 text-indigo-600 border-indigo-100">{currentSelectedJob.status}</span></div>
+                    <div className="p-4 bg-white border-b border-slate-200 flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <button onClick={() => setSelectedJobId(null)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500">
+                                <X className="w-5 h-5" />
+                            </button>
+                            <span className="text-sm font-bold text-slate-400">/ {currentSelectedJob.company}</span>
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border bg-indigo-50 text-indigo-600 border-indigo-100">
+                            {currentSelectedJob.status}
+                        </span>
+                    </div>
                     <div className="flex-1 overflow-hidden">
                         <JobDetail job={currentSelectedJob} userProfile={userProfile!} onUpdateJob={handleUpdateJob} onClose={() => setSelectedJobId(null)} showNotification={showNotification} />
                     </div>
@@ -268,4 +295,8 @@ const AppContent: React.FC<AppContentProps> = ({ user, auth, isLoaded, isSignedI
       </main>
     </div>
   );
+};
+
+export const App: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
+  return <AppContent isDemo={isDemo} />;
 };
