@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useUser, useAuth, UserButton } from '@clerk/clerk-react';
-import { Job, JobStatus, ViewState, UserProfile, EmailAccount } from './app-types';
+import { Job, JobStatus, ViewState, UserProfile, EmailAccount } from '../app-types';
 import { DashboardStats } from './components/DashboardStats';
 import { JobCard } from './components/JobCard';
 import { InboxScanner } from './components/InboxScanner';
