@@ -2,17 +2,17 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useUser, useAuth, UserButton } from '@clerk/clerk-react';
 import { Job, JobStatus, ViewState, UserProfile, EmailAccount } from '../app-types';
-import { DashboardStats } from './components/DashboardStats';
-import { JobCard } from './components/JobCard';
-import { InboxScanner } from './components/InboxScanner';
-import { Settings } from './components/Settings';
-import { Auth } from './components/Auth';
-import { Onboarding } from './components/Onboarding';
-import { ApplicationTracker } from './components/ApplicationTracker';
-import { DebugView } from './components/DebugView';
-import { AddJobModal } from './components/AddJobModal';
+import { DashboardStats } from './DashboardStats';
+import { JobCard } from './JobCard';
+import { InboxScanner } from './InboxScanner';
+import { Settings } from './Settings';
+import { Auth } from './Auth';
+import { Onboarding } from '.Onboarding';
+import { ApplicationTracker } from './ApplicationTracker';
+import { DebugView } from './DebugView';
+import { AddJobModal } from './AddJobModal';
 import { AutomationModal } from './AutomationModal';
-import { NotificationToast, NotificationType } from './components/NotificationToast';
+import { NotificationToast, NotificationType } from './NotificationToast';
 import { 
   fetchJobsFromDb, 
   getUserProfile, 
