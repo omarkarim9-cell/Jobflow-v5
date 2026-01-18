@@ -18,7 +18,99 @@ import {
     Target,
     List
 } from 'lucide-react';
+import { useState } from 'react';
 
+// Add this state at the top of component
+const [isGenerating, setIsGenerating] = useState(false);
+
+// Add these imports
+import { FileText, StickyNote, CheckCircle2, ChevronDown } from 'lucide-react';
+const [isGenerating, setIsGenerating] = useState(false);
+
+const handleGenerateDocuments = async () => {
+    if (!userProfile.resumeContent || userProfile.resumeContent.length < 50) {
+        notify("Please upload your resume in Settings first.", "error");
+        return;
+    }
+    
+    setIsGenerating(true);
+    notify(`Generating application materials for ${job.company}...`, 'success');
+    
+    try {
+        const response = await fetch('/api/generate-assets', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                jobTitle: job.title,
+                company: job.company,
+                description: job.description,
+                resume: userProfile.resumeContent,
+                name: userProfile.fullName,
+                email: userProfile.email
+            })
+        });
+        
+        if (!response.ok) throw new Error('Generation failed');
+        
+        const { resume, letter } = await response.json();
+        
+        const updatedJob: Job = { 
+            ...job, 
+            customizedResume: resume, 
+            coverLetter: letter
+        };
+        
+        await onUpdateJob(updatedJob);
+        notify("Documents ready!", "success");
+    } catch (e) {
+        console.error("Generation failed:", e);
+        notify("Generation failed. Check API key.", "error");
+    } finally {
+        setIsGenerating(false);
+    }
+};
+// Add this function INSIDE the JobDetail component
+const handleGenerateDocuments = async () => {
+    if (!userProfile.resumeContent || userProfile.resumeContent.length < 50) {
+        notify("Please upload your resume in Settings first.", "error");
+        return;
+    }
+    
+    setIsGenerating(true);
+    notify(`Generating application materials for ${job.company}...`, 'success');
+    
+    try {
+        // Call v5's gemini service (you'll need to add these functions)
+        const response = await fetch('/api/generate-assets', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                jobTitle: job.title,
+                company: job.company,
+                description: job.description,
+                resume: userProfile.resumeContent,
+                name: userProfile.fullName,
+                email: userProfile.email
+            })
+        });
+        
+        const { resume, letter } = await response.json();
+        
+        const updatedJob: Job = { 
+            ...job, 
+            customizedResume: resume, 
+            coverLetter: letter
+        };
+        
+        await onUpdateJob(updatedJob);
+        notify("Documents ready!", "success");
+    } catch (e) {
+        console.error("Generation failed:", e);
+        notify("Generation failed. Check API key.", "error");
+    } finally {
+        setIsGenerating(false);
+    }
+};
 interface JobDetailProps {
   job: Job;
   userProfile: UserProfile;
@@ -128,35 +220,22 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, userProfile, onUpdate
             </div>
             
             <div className="flex flex-col gap-3 w-full md:w-auto">
-                <a 
-                  href={job.applicationUrl}
-                  target="_blank"
-                  className="w-full md:w-48 py-5 bg-indigo-600 text-white rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest text-center hover:bg-indigo-700 flex items-center justify-center gap-2 shadow-xl shadow-indigo-100 transition-all"
-                >
-                    Apply on Source <ExternalLink className="w-4 h-4" />
-                </a>
-            </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="bg-indigo-900 text-white p-10 rounded-[2.5rem] shadow-2xl relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-                <div className="flex justify-between items-start mb-8">
-                    <h3 className="text-xs font-black uppercase tracking-[0.3em] opacity-60">AI Audio Briefing</h3>
-                    <Volume2 className="w-6 h-6 opacity-40" />
-                </div>
-                <p className="text-sm font-medium leading-relaxed mb-8 opacity-80 italic">
-                    "Hi {userProfile.fullName.split(' ')[0]}, let me brief you on why this role is a great fit for your {userProfile.preferences.targetRoles[0] || 'background'}."
-                </p>
-                <button 
-                    onClick={handlePlayBriefing}
-                    disabled={isAudioLoading}
-                    className="flex items-center gap-3 px-8 py-4 bg-white text-indigo-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-50 transition-all shadow-xl"
-                >
-                    {isAudioLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
-                    Listen to Brief
-                </button>
-            </div>
+    <a 
+      href={job.applicationUrl}
+      target="_blank"
+      className="w-full md:w-48 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl font-black text-[10px] uppercase text-center hover:bg-slate-50 flex items-center justify-center gap-2"
+    >
+        Visit Job Page <ExternalLink className="w-4 h-4" />
+    </a>
+    <button 
+      onClick={handleGenerateDocuments} 
+      disabled={isGenerating} 
+      className="w-full md:w-48 bg-indigo-600 text-white py-4 rounded-2xl font-black text-[10px] uppercase hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-2 shadow-xl"
+    >
+      {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} 
+      Generate Assets
+    </button>
+</div>
 
             <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm">
                 <div className="flex justify-between items-start mb-8">
@@ -252,7 +331,67 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, userProfile, onUpdate
                 )}
             </div>
         )}
+</div>
 
+        {/* Resume & Letter Generation Section - ADD THIS */}
+        <div className="grid grid-cols-1 gap-8">
+            <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm">
+                <div className="flex justify-between items-center mb-8">
+                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                        <Sparkles className="w-5 h-5 text-indigo-600" /> Application Materials
+                    </h3>
+                    <button 
+                        onClick={handleGenerateDocuments} 
+                        disabled={isGenerating} 
+                        className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2 shadow-xl"
+                    >
+                        {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} 
+                        {job.customizedResume ? 'Regenerate' : 'Generate Assets'}
+                    </button>
+                </div>
+
+                {(job.customizedResume || job.coverLetter) ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {job.customizedResume && (
+                            <div className="flex flex-col">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <FileText className="w-5 h-5 text-indigo-600" />
+                                    <h4 className="text-xs font-black uppercase tracking-widest text-slate-800">Tailored Resume</h4>
+                                </div>
+                                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 max-h-96 overflow-y-auto flex-1">
+                                    <pre className="text-xs font-mono text-slate-600 leading-relaxed whitespace-pre-wrap font-sans">
+                                        {job.customizedResume}
+                                    </pre>
+                                </div>
+                            </div>
+                        )}
+                        {job.coverLetter && (
+                            <div className="flex flex-col">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <StickyNote className="w-5 h-5 text-purple-600" />
+                                    <h4 className="text-xs font-black uppercase tracking-widest text-slate-800">Cover Letter</h4>
+                                </div>
+                                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 max-h-96 overflow-y-auto flex-1">
+                                    <pre className="text-xs font-mono text-slate-600 leading-relaxed whitespace-pre-wrap font-sans">
+                                        {job.coverLetter}
+                                    </pre>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    <div className="p-12 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                        <Sparkles className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+                        <p className="text-xs text-slate-400 font-medium">Click "Generate Assets" to create customized resume and cover letter</p>
+                    </div>
+                )}
+            </div>
+        </div>
+
+        <div className="bg-white p-12 rounded-[2.5rem] border border-slate-200 shadow-sm">
+            <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-10 flex items-center gap-3">
+                <Sparkles className="w-5 h-5 text-indigo-600" /> Role Deep Analysis
+            </h3>
         <div className="bg-white p-12 rounded-[2.5rem] border border-slate-200 shadow-sm">
             <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-10 flex items-center gap-3">
                 <Sparkles className="w-5 h-5 text-indigo-600" /> Role Deep Analysis

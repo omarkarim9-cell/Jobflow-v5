@@ -17,6 +17,7 @@ import { Support } from './Support';
 import { Subscription } from './Subscription';
 import { JobMap } from './JobMap';
 import { UserManual } from './UserManual';
+import { AlertCircle } from 'lucide-react';
 import { 
   fetchJobsFromDb, 
   getUserProfile, 
@@ -176,7 +177,7 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
     );
   }
 
-  // 4. ONBOARDING GATE (New user flow)
+  /* 4. ONBOARDING GATE (New user flow)
   if (!userProfile) {
     return (
         <Onboarding 
@@ -187,7 +188,7 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
         />
     );
   }
-
+*/
   // 5. MAIN APPLICATION
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden" dir={isRtl ? 'rtl' : 'ltr'}>
@@ -238,20 +239,28 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
             {currentView === ViewState.DASHBOARD && (
                 <div className="h-full overflow-y-auto p-8">
                     {isResumeMissing && (
-                        <div className="mb-8 p-8 bg-indigo-600 rounded-[2.5rem] flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl shadow-indigo-100 animate-in fade-in duration-700 relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-3xl group-hover:bg-white/10 transition-all duration-1000"></div>
-                            <div className="flex items-center gap-6 z-10">
-                                <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/20">
-                                    <Sparkles className="w-8 h-8 text-white" />
-                                </div>
-                                <div className="text-white">
-                                    <h3 className="text-xl font-black uppercase tracking-tight">Complete Your AI Profile</h3>
-                                    <p className="text-sm font-medium opacity-80 mt-1 max-w-lg">Unlock deep intelligence features by uploading your resume.</p>
-                                </div>
-                            </div>
-                            <button onClick={() => setCurrentView(ViewState.SETTINGS)} className="z-10 px-8 py-4 bg-white text-indigo-600 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-50 transition-all flex items-center gap-2 group/btn">Get Started <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" /></button>
-                        </div>
-                    )}
+    <div className="mb-8 p-6 bg-amber-50 border border-amber-200 rounded-[2rem] flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-top-4 duration-500">
+        <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center text-amber-600 shrink-0">
+                <AlertCircle className="w-6 h-6" />
+            </div>
+            <div>
+                <h3 className="text-sm font-black text-amber-900 uppercase tracking-tight">
+                    Resume Not Configured
+                </h3>
+                <p className="text-xs text-amber-700 mt-0.5">
+                    Please upload your master resume in Settings to enable AI document generation.
+                </p>
+            </div>
+        </div>
+        <button
+            onClick={() => setCurrentView(ViewState.SETTINGS)}
+            className="px-6 py-3 bg-white border border-amber-200 text-amber-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-amber-100 transition-all shadow-sm"
+        >
+            Configure Now
+        </button>
+    </div>
+)}
                     <DashboardStats jobs={jobs} userProfile={userProfile!} />
                 </div>
             )}

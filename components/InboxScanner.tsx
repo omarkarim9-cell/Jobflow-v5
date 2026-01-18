@@ -63,24 +63,35 @@ export const InboxScanner: React.FC<InboxScannerProps> = ({
                       const htmlContent = decodeEmailBody(bodyData);
                       
                       let extracted: any[] = [];
-                      if (scanMode === 'ai') {
-                          setProgress(`AI Reasoning... ${email.id.substring(0, 5)}`);
-                          extracted = await analyzeJobsWithAi(htmlContent, resumeContent, sessionAccount.accessToken);
-                      } else {
-                          extracted = localExtractJobs(htmlContent, userPreferences?.targetRoles || []);
-                      }
+						if (scanMode === 'ai') {
+							setProgress(`AI Reasoning... ${email.id.substring(0, 5)}`);
+							extracted = await analyzeJobsWithAi(htmlContent, resumeContent, sessionAccount.accessToken);
+						} else {
+							extracted = localExtractJobs(htmlContent, userPreferences?.targetRoles || []);
+						}
 
-                      extracted.forEach(job => {
-                          if (job.applicationUrl && !uniqueJobsMap.has(job.applicationUrl)) {
-                                uniqueJobsMap.set(job.applicationUrl, { 
-                                    ...job, 
-                                    id: `gmail-${email.id}-${Math.random().toString(36).substr(2, 5)}`,
-                                    source: 'Gmail', 
-                                    detectedAt: new Date().toISOString(),
-                                    status: JobStatus.DETECTED 
-                                });
-                          }
-                      });
+                     extracted.forEach(job => {
+						// Add role matching validation
+						const titleLower = (job.title || '').toLowerCase();
+						const isRoleMatch = !userPreferences?.targetRoles?.length || 
+							userPreferences.targetRoles.some(role => {
+								const roleRegex = new RegExp(`\\b${role.toLowerCase()}\\b`, 'i');
+								return roleRegex.test(titleLower);
+							});
+						
+						// Filter out LinkedIn profile spam
+						const isSpam = titleLower.includes('view') && titleLower.includes('profile');
+						
+						if (job.applicationUrl && !uniqueJobsMap.has(job.applicationUrl) && isRoleMatch && !isSpam) {
+							uniqueJobsMap.set(job.applicationUrl, { 
+								...job, 
+								id: `gmail-${email.id}-${Math.random().toString(36).substr(2, 5)}`,
+								source: 'Gmail', 
+								detectedAt: new Date().toISOString(),
+								status: JobStatus.DETECTED 
+							});
+						}
+});
                   } catch (e) {
                       console.error("Batch error:", e);
                   }
