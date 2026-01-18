@@ -2,12 +2,7 @@ import React from 'react';
 import { SignIn, SignUp } from '@clerk/clerk-react';
 import { Briefcase, ShieldCheck } from 'lucide-react';
 
-interface AuthProps {
-  onLogin: (profile: any) => void;
-  onSwitchToSignup: () => void;
-}
-
-export const Auth: React.FC<AuthProps> = () => {
+export const Auth: React.FC = () => {
   const [view, setView] = React.useState<'signin' | 'signup'>('signin');
 
   return (
@@ -21,7 +16,7 @@ export const Auth: React.FC<AuthProps> = () => {
           <p className="text-slate-500 mt-2 font-medium">Your automated career agent</p>
         </div>
 
-        <div className="bg-white rounded-3xl shadow-2xl shadow-slate-200/50 border border-slate-200 overflow-hidden">
+        <div className="bg-white rounded-3xl shadow-2xl shadow-slate-200/50 border border-slate-200 overflow-hidden min-h-[500px]">
             <div className="p-1 bg-slate-50 border-b border-slate-100 flex">
                 <button 
                     onClick={() => setView('signin')}
@@ -37,44 +32,35 @@ export const Auth: React.FC<AuthProps> = () => {
                 </button>
             </div>
 
-            <div className="p-8">
+            <div className="p-8 flex flex-col items-center">
                 {view === 'signin' ? (
-                  <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    <SignIn 
-                      appearance={{
-                        elements: {
-                          rootBox: 'w-full',
-                          card: 'shadow-none border-0 p-0 w-full',
-                          headerTitle: 'hidden',
-                          headerSubtitle: 'hidden',
-                          formButtonPrimary: 'bg-indigo-600 hover:bg-indigo-700 text-sm font-bold h-11 transition-all shadow-lg shadow-indigo-100',
-                          socialButtonsBlockButton: 'border-slate-200 hover:bg-slate-50 h-11 transition-all',
-                          footer: 'hidden',
-                          formFieldInput: 'h-11 border-slate-200 focus:border-indigo-500 focus:ring-indigo-500 transition-all rounded-xl',
-                          dividerRow: 'my-6',
-                          identityPreview: 'bg-slate-50 border-slate-200'
-                        }
-                      }}
-                    />
-                  </div>
+                  <SignIn 
+                    routing="virtual"
+                    appearance={{
+                      elements: {
+                        rootBox: 'w-full',
+                        card: 'shadow-none border-0 p-0 w-full bg-transparent',
+                        headerTitle: 'hidden',
+                        headerSubtitle: 'hidden',
+                        footerAction: 'hidden',
+                        formButtonPrimary: 'bg-indigo-600 hover:bg-indigo-700 text-sm font-bold h-11 transition-all shadow-lg shadow-indigo-100',
+                      }
+                    }}
+                  />
                 ) : (
-                  <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    <SignUp 
-                      appearance={{
-                        elements: {
-                          rootBox: 'w-full',
-                          card: 'shadow-none border-0 p-0 w-full',
-                          headerTitle: 'hidden',
-                          headerSubtitle: 'hidden',
-                          formButtonPrimary: 'bg-indigo-600 hover:bg-indigo-700 text-sm font-bold h-11 transition-all shadow-lg shadow-indigo-100',
-                          socialButtonsBlockButton: 'border-slate-200 hover:bg-slate-50 h-11 transition-all',
-                          footer: 'hidden',
-                          formFieldInput: 'h-11 border-slate-200 focus:border-indigo-500 focus:ring-indigo-500 transition-all rounded-xl',
-                          dividerRow: 'my-6'
-                        }
-                      }}
-                    />
-                  </div>
+                  <SignUp 
+                    routing="virtual"
+                    appearance={{
+                      elements: {
+                        rootBox: 'w-full',
+                        card: 'shadow-none border-0 p-0 w-full bg-transparent',
+                        headerTitle: 'hidden',
+                        headerSubtitle: 'hidden',
+                        footerAction: 'hidden',
+                        formButtonPrimary: 'bg-indigo-600 hover:bg-indigo-700 text-sm font-bold h-11 transition-all shadow-lg shadow-indigo-100',
+                      }
+                    }}
+                  />
                 )}
             </div>
         </div>
