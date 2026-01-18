@@ -176,16 +176,47 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
   }
 
   // 4. Onboarding (If no profile found in DB)
-  if (!userProfile) {
+  // 4. Create default profile if missing (skip onboarding)
+if (!userProfile && user) {
+    const defaultProfile: UserProfile = {
+        id: user.id,
+        fullName: user.fullName || '',
+        email: user.primaryEmailAddress?.emailAddress || '',
+        phone: '',
+        resumeContent: '',
+        resumeFileName: '',
+        preferences: {
+            targetRoles: [],
+            targetLocations: [],
+            minSalary: '',
+            remoteOnly: false,
+            language: 'en'
+        },
+        connectedAccounts: [],
+        plan: 'pro',
+        onboardedAt: new Date().toISOString()
+    };
+    
+    // Set profile immediately to show dashboard
+    setUserProfile(defaultProfile);
+    
+    // Save to DB in background (non-blocking)
+    if (!isDemo) {
+        getToken().then(token => {
+            if (token) saveUserProfile(defaultProfile, token);
+        });
+    }
+}
+
+// If still no profile and no user, show loading
+if (!userProfile) {
     return (
-        <Onboarding 
-            onComplete={(p) => setUserProfile(p)} 
-            onDirHandleChange={() => {}} 
-            dirHandle={{isVirtual: true}} 
-            showNotification={showNotification} 
-        />
+        <div className="h-screen flex flex-col items-center justify-center bg-slate-50">
+            <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mb-2"/>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Preparing Dashboard...</p>
+        </div>
     );
-  }
+}
 
   // 5. Main App
   return (
