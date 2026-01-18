@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Job, UserProfile } from '../app-types';
 import { generateAudioBriefing, generateInterviewQuestions } from '../services/geminiService';
@@ -18,99 +17,7 @@ import {
     Target,
     List
 } from 'lucide-react';
-import { useState } from 'react';
 
-// Add this state at the top of component
-const [isGenerating, setIsGenerating] = useState(false);
-
-// Add these imports
-import { FileText, StickyNote, CheckCircle2, ChevronDown } from 'lucide-react';
-const [isGenerating, setIsGenerating] = useState(false);
-
-const handleGenerateDocuments = async () => {
-    if (!userProfile.resumeContent || userProfile.resumeContent.length < 50) {
-        notify("Please upload your resume in Settings first.", "error");
-        return;
-    }
-    
-    setIsGenerating(true);
-    notify(`Generating application materials for ${job.company}...`, 'success');
-    
-    try {
-        const response = await fetch('/api/generate-assets', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                jobTitle: job.title,
-                company: job.company,
-                description: job.description,
-                resume: userProfile.resumeContent,
-                name: userProfile.fullName,
-                email: userProfile.email
-            })
-        });
-        
-        if (!response.ok) throw new Error('Generation failed');
-        
-        const { resume, letter } = await response.json();
-        
-        const updatedJob: Job = { 
-            ...job, 
-            customizedResume: resume, 
-            coverLetter: letter
-        };
-        
-        await onUpdateJob(updatedJob);
-        notify("Documents ready!", "success");
-    } catch (e) {
-        console.error("Generation failed:", e);
-        notify("Generation failed. Check API key.", "error");
-    } finally {
-        setIsGenerating(false);
-    }
-};
-// Add this function INSIDE the JobDetail component
-const handleGenerateDocuments = async () => {
-    if (!userProfile.resumeContent || userProfile.resumeContent.length < 50) {
-        notify("Please upload your resume in Settings first.", "error");
-        return;
-    }
-    
-    setIsGenerating(true);
-    notify(`Generating application materials for ${job.company}...`, 'success');
-    
-    try {
-        // Call v5's gemini service (you'll need to add these functions)
-        const response = await fetch('/api/generate-assets', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                jobTitle: job.title,
-                company: job.company,
-                description: job.description,
-                resume: userProfile.resumeContent,
-                name: userProfile.fullName,
-                email: userProfile.email
-            })
-        });
-        
-        const { resume, letter } = await response.json();
-        
-        const updatedJob: Job = { 
-            ...job, 
-            customizedResume: resume, 
-            coverLetter: letter
-        };
-        
-        await onUpdateJob(updatedJob);
-        notify("Documents ready!", "success");
-    } catch (e) {
-        console.error("Generation failed:", e);
-        notify("Generation failed. Check API key.", "error");
-    } finally {
-        setIsGenerating(false);
-    }
-};
 interface JobDetailProps {
   job: Job;
   userProfile: UserProfile;
@@ -122,11 +29,55 @@ interface JobDetailProps {
 export const JobDetail: React.FC<JobDetailProps> = ({ job, userProfile, onUpdateJob, onClose, showNotification }) => {
   const [isAudioLoading, setIsAudioLoading] = useState(false);
   const [isInterviewLoading, setIsInterviewLoading] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [questions, setQuestions] = useState<string[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
 
   const notify = (msg: string, type: 'success' | 'error') => {
       if (showNotification) showNotification(msg, type);
+  };
+
+  const handleGenerateDocuments = async () => {
+    if (!userProfile.resumeContent || userProfile.resumeContent.length < 50) {
+      notify("Please upload your resume in Settings first.", "error");
+      return;
+    }
+    
+    setIsGenerating(true);
+    notify(`Generating application materials for ${job.company}...`, 'success');
+    
+    try {
+      const response = await fetch('/api/generate-assets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jobTitle: job.title,
+          company: job.company,
+          description: job.description,
+          resume: userProfile.resumeContent,
+          name: userProfile.fullName,
+          email: userProfile.email
+        })
+      });
+      
+      if (!response.ok) throw new Error('Generation failed');
+      
+      const { resume, letter } = await response.json();
+      
+      const updatedJob: Job = { 
+        ...job, 
+        customizedResume: resume, 
+        coverLetter: letter
+      };
+      
+      await onUpdateJob(updatedJob);
+      notify("Documents ready!", "success");
+    } catch (e) {
+      console.error("Generation failed:", e);
+      notify("Generation failed. Check API key.", "error");
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const decodeAudioData = async (base64: string): Promise<AudioBuffer> => {
@@ -220,49 +171,49 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, userProfile, onUpdate
             </div>
             
             <div className="flex flex-col gap-3 w-full md:w-auto">
-    <a 
-      href={job.applicationUrl}
-      target="_blank"
-      className="w-full md:w-48 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl font-black text-[10px] uppercase text-center hover:bg-slate-50 flex items-center justify-center gap-2"
-    >
-        Visit Job Page <ExternalLink className="w-4 h-4" />
-    </a>
-    <button 
-      onClick={handleGenerateDocuments} 
-      disabled={isGenerating} 
-      className="w-full md:w-48 bg-indigo-600 text-white py-4 rounded-2xl font-black text-[10px] uppercase hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-2 shadow-xl"
-    >
-      {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} 
-      Generate Assets
-    </button>
-</div>
-
-            <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm">
-                <div className="flex justify-between items-start mb-8">
-                    <h3 className="text-xs font-black uppercase tracking-[0.3em] text-slate-400">Preparation Lab</h3>
-                    <BrainCircuit className="w-6 h-6 text-indigo-400" />
-                </div>
-                <div className="space-y-4 max-h-48 overflow-y-auto custom-scrollbar pr-4">
-                    {questions.length > 0 ? (
-                        questions.map((q, i) => (
-                            <div key={i} className="flex gap-4 items-start animate-in slide-in-from-left duration-300">
-                                <span className="w-6 h-6 rounded-xl bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500 shrink-0 border border-slate-200">{i+1}</span>
-                                <p className="text-xs font-bold text-slate-700 leading-relaxed">{q}</p>
-                            </div>
-                        ))
-                    ) : (
-                        <p className="text-xs text-slate-400 font-medium italic">Generate 10 tailored interview questions for this specific role.</p>
-                    )}
-                </div>
-                <button 
-                    onClick={handleGenerateQuestions}
-                    disabled={isInterviewLoading}
-                    className="mt-8 w-full flex items-center justify-center gap-3 py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg"
-                >
-                    {isInterviewLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ListChecks className="w-4 h-4" />}
-                    Generate 10 Questions
-                </button>
+              <a 
+                href={job.applicationUrl}
+                target="_blank"
+                className="w-full md:w-48 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl font-black text-[10px] uppercase text-center hover:bg-slate-50 flex items-center justify-center gap-2"
+              >
+                  Visit Job Page <ExternalLink className="w-4 h-4" />
+              </a>
+              <button 
+                onClick={handleGenerateDocuments} 
+                disabled={isGenerating} 
+                className="w-full md:w-48 bg-indigo-600 text-white py-4 rounded-2xl font-black text-[10px] uppercase hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-2 shadow-xl"
+              >
+                {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />} 
+                Generate Assets
+              </button>
             </div>
+        </div>
+
+        <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm">
+            <div className="flex justify-between items-start mb-8">
+                <h3 className="text-xs font-black uppercase tracking-[0.3em] text-slate-400">Preparation Lab</h3>
+                <BrainCircuit className="w-6 h-6 text-indigo-400" />
+            </div>
+            <div className="space-y-4 max-h-48 overflow-y-auto custom-scrollbar pr-4">
+                {questions.length > 0 ? (
+                    questions.map((q, i) => (
+                        <div key={i} className="flex gap-4 items-start animate-in slide-in-from-left duration-300">
+                            <span className="w-6 h-6 rounded-xl bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-500 shrink-0 border border-slate-200">{i+1}</span>
+                            <p className="text-xs font-bold text-slate-700 leading-relaxed">{q}</p>
+                        </div>
+                    ))
+                ) : (
+                    <p className="text-xs text-slate-400 font-medium italic">Generate 10 tailored interview questions for this specific role.</p>
+                )}
+            </div>
+            <button 
+                onClick={handleGenerateQuestions}
+                disabled={isInterviewLoading}
+                className="mt-8 w-full flex items-center justify-center gap-3 py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg"
+            >
+                {isInterviewLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ListChecks className="w-4 h-4" />}
+                Generate 10 Questions
+            </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -331,9 +282,7 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, userProfile, onUpdate
                 )}
             </div>
         )}
-</div>
 
-        {/* Resume & Letter Generation Section - ADD THIS */}
         <div className="grid grid-cols-1 gap-8">
             <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm">
                 <div className="flex justify-between items-center mb-8">
@@ -388,10 +337,6 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, userProfile, onUpdate
             </div>
         </div>
 
-        <div className="bg-white p-12 rounded-[2.5rem] border border-slate-200 shadow-sm">
-            <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-10 flex items-center gap-3">
-                <Sparkles className="w-5 h-5 text-indigo-600" /> Role Deep Analysis
-            </h3>
         <div className="bg-white p-12 rounded-[2.5rem] border border-slate-200 shadow-sm">
             <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-10 flex items-center gap-3">
                 <Sparkles className="w-5 h-5 text-indigo-600" /> Role Deep Analysis
