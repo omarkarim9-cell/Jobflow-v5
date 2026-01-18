@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useUser, useAuth, UserButton } from '@clerk/clerk-react';
 import { Job, JobStatus, ViewState, UserProfile, EmailAccount } from '../app-types';
@@ -29,7 +28,7 @@ import {
   LayoutDashboard, 
   Briefcase, 
   Mail, 
-  User as UserIcon, 
+  Settings as SettingsIcon, 
   Search as SearchIcon,
   Loader2,
   List,
@@ -149,6 +148,7 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
   const applyingJob = useMemo(() => jobs.find(j => j.id === applyingJobId), [jobs, applyingJobId]);
   const isResumeMissing = !userProfile?.resumeContent || userProfile.resumeContent.length < 50;
 
+  // Flow Gate 1: Loading
   if (!isLoaded || ((isSignedIn || isDemo) && loading && !userProfile)) {
     return (
         <div className="h-screen flex flex-col items-center justify-center bg-slate-50">
@@ -158,14 +158,17 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
     );
   }
 
+  // Flow Gate 2: Auth (Login Page)
   if (!isSignedIn && !isDemo) return <Auth onLogin={() => {}} onSwitchToSignup={() => {}} />;
 
+  // Flow Gate 3: Onboarding
   if (!userProfile) {
     return (
         <Onboarding onComplete={(p) => setUserProfile(p)} onDirHandleChange={() => {}} dirHandle={{isVirtual: true}} showNotification={showNotification} />
     );
   }
 
+  // Flow Gate 4: Main Application Dashboard
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden" dir={isRtl ? 'rtl' : 'ltr'}>
       {notification && <NotificationToast message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
@@ -196,7 +199,7 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
           
           <div className="my-2 border-t border-slate-100" />
           <p className="px-3 py-1 text-[10px] font-black uppercase text-slate-400 tracking-widest">System</p>
-          <button onClick={() => setCurrentView(ViewState.SETTINGS)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.SETTINGS ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><UserIcon className="w-5 h-5 me-3" /> Profile</button>
+          <button onClick={() => setCurrentView(ViewState.SETTINGS)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.SETTINGS ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><SettingsIcon className="w-5 h-5 me-3" /> Settings</button>
           <button onClick={() => setCurrentView(ViewState.SUBSCRIPTION)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.SUBSCRIPTION ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><CreditCard className="w-5 h-5 me-3" /> Subscription</button>
           <button onClick={() => setCurrentView(ViewState.MANUAL)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.MANUAL ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><Book className="w-5 h-5 me-3" /> User Guide</button>
           <button onClick={() => setCurrentView(ViewState.SUPPORT)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.SUPPORT ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><LifeBuoy className="w-5 h-5 me-3" /> Support</button>

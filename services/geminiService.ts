@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Modality, Type } from "@google/genai";
 import { Job, UserProfile, JobStatus } from "../app-types";
 
@@ -75,19 +74,22 @@ export const generateInterviewQuestions = async (job: Job, profile: UserProfile)
     const ai = getAi();
     const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: `Generate exactly 10 comprehensive practice interview questions for:
-        Role: ${job.title} at ${job.company}
-        Description: ${job.description.substring(0, 1000)}
-        Candidate: ${profile.resumeContent.substring(0, 1000)}
+        contents: `Generate exactly 10 comprehensive and highly relevant practice interview questions for the ${job.title} role at ${job.company}. 
+        Candidate Resume: ${profile.resumeContent.substring(0, 1000)}
+        Job Description: ${job.description.substring(0, 1000)}
         
-        Provide a mix of technical, behavioral, and role-specific questions.`,
+        Provide a mix of technical, behavioral, and situational questions tailored to this candidate's background and this specific role.`,
         config: {
             responseMimeType: "application/json",
             responseSchema: {
                 type: Type.OBJECT,
                 properties: {
-                    questions: { type: Type.ARRAY, items: { type: Type.STRING } }
-                }
+                    questions: {
+                        type: Type.ARRAY,
+                        items: { type: Type.STRING }
+                    }
+                },
+                required: ["questions"]
             }
         }
     });
