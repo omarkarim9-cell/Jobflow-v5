@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useUser, useAuth, UserButton } from '@clerk/clerk-react';
 import { Job, JobStatus, ViewState, UserProfile, EmailAccount } from '../app-types';
@@ -16,6 +17,7 @@ import { Analytics } from './Analytics';
 import { Support } from './Support';
 import { Subscription } from './Subscription';
 import { JobMap } from './JobMap';
+import { UserManual } from './UserManual';
 import { 
   fetchJobsFromDb, 
   getUserProfile, 
@@ -27,7 +29,7 @@ import {
   LayoutDashboard, 
   Briefcase, 
   Mail, 
-  Settings as SettingsIcon, 
+  User as UserIcon, 
   Search as SearchIcon,
   Loader2,
   List,
@@ -41,7 +43,8 @@ import {
   BarChart3,
   LifeBuoy,
   CreditCard,
-  Map as MapIcon
+  Map as MapIcon,
+  Book
 } from 'lucide-react';
 import { JobDetail } from './JobDetail';
 
@@ -193,8 +196,9 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
           
           <div className="my-2 border-t border-slate-100" />
           <p className="px-3 py-1 text-[10px] font-black uppercase text-slate-400 tracking-widest">System</p>
-          <button onClick={() => setCurrentView(ViewState.SETTINGS)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.SETTINGS ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><SettingsIcon className="w-5 h-5 me-3" /> Settings</button>
+          <button onClick={() => setCurrentView(ViewState.SETTINGS)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.SETTINGS ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><UserIcon className="w-5 h-5 me-3" /> Profile</button>
           <button onClick={() => setCurrentView(ViewState.SUBSCRIPTION)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.SUBSCRIPTION ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><CreditCard className="w-5 h-5 me-3" /> Subscription</button>
+          <button onClick={() => setCurrentView(ViewState.MANUAL)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.MANUAL ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><Book className="w-5 h-5 me-3" /> User Guide</button>
           <button onClick={() => setCurrentView(ViewState.SUPPORT)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.SUPPORT ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><LifeBuoy className="w-5 h-5 me-3" /> Support</button>
           {isOwner && <button onClick={() => setCurrentView(ViewState.DEBUG)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mt-4 ${currentView === ViewState.DEBUG ? 'bg-slate-900 text-white font-bold' : 'text-slate-400 hover:bg-slate-100'}`}><Terminal className="w-5 h-5 me-3" /> Dev Console</button>}
         </div>
@@ -235,7 +239,7 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
                         <div className="h-64 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-[2rem] text-slate-400"><SearchIcon className="w-10 h-10 mb-4 opacity-20" /><p className="font-bold text-xs uppercase tracking-widest text-center">No leads found.</p></div>
                     ) : (
                         jobs.filter(j => j.status === JobStatus.DETECTED).map(j => (
-                            <JobCard key={j.id} job={j} onClick={setSelectedJobId.bind(null, j.id)} isSelected={selectedJobId === j.id} isChecked={false} onToggleCheck={() => {}} onAutoApply={(e, job) => setApplyingJobId(job.id)} />
+                            <JobCard key={j.id} job={j} onClick={(job) => setSelectedJobId(job.id)} isSelected={selectedJobId === j.id} isChecked={false} onToggleCheck={() => {}} onAutoApply={(e, job) => setApplyingJobId(job.id)} />
                         ))
                     )}
                 </div>
@@ -248,11 +252,24 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
             {currentView === ViewState.SUBSCRIPTION && <Subscription userProfile={userProfile!} onUpdateProfile={handleUpdateProfile} showNotification={showNotification} />}
             {currentView === ViewState.DISCOVERY && <JobMap onImport={(newJobs) => { setJobs(prev => [...newJobs, ...prev]); newJobs.forEach(handleUpdateJob); }} targetRole={userProfile?.preferences?.targetRoles?.[0]} />}
             {currentView === ViewState.DEBUG && <div className="h-full overflow-y-auto p-8"><DebugView /></div>}
+            {currentView === ViewState.MANUAL && <UserManual userProfile={userProfile!} />}
             
             {selectedJobId && currentSelectedJob && (
                 <div className="absolute inset-0 z-50 bg-slate-50 overflow-hidden flex flex-col animate-in slide-in-from-right duration-300 shadow-2xl">
-                    <div className="p-4 bg-white border-b border-slate-200 flex items-center justify-between"><div className="flex items-center gap-4"><button onClick={() => setSelectedJobId(null)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500"><X className="w-5 h-5" /></button><span className="text-sm font-bold text-slate-400">/ {currentSelectedJob.company}</span></div><span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border bg-indigo-50 text-indigo-600 border-indigo-100">{currentSelectedJob.status}</span></div>
-                    <div className="flex-1 overflow-hidden"><JobDetail job={currentSelectedJob} userProfile={userProfile!} onUpdateJob={handleUpdateJob} onClose={() => setSelectedJobId(null)} showNotification={showNotification} /></div>
+                    <div className="p-4 bg-white border-b border-slate-200 flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                            <button onClick={() => setSelectedJobId(null)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500">
+                                <X className="w-5 h-5" />
+                            </button>
+                            <span className="text-sm font-bold text-slate-400">/ {currentSelectedJob.company}</span>
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border bg-indigo-50 text-indigo-600 border-indigo-100">
+                            {currentSelectedJob.status}
+                        </span>
+                    </div>
+                    <div className="flex-1 overflow-hidden">
+                        <JobDetail job={currentSelectedJob} userProfile={userProfile!} onUpdateJob={handleUpdateJob} onClose={() => setSelectedJobId(null)} showNotification={showNotification} />
+                    </div>
                 </div>
             )}
         </div>

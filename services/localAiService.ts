@@ -1,11 +1,11 @@
 
 /**
  * Local AI Service
- * Provides robust fallback generation for Resumes and Cover Letters.
+ * Provides robust fallback generation and strict job extraction.
  */
 
 const extractKeywords = (text: string): string[] => {
-    const stopwords = new Set(['the', 'and', 'or', 'a', 'an', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by']);
+    const stopwords = new Set(['the', 'and', 'or', 'a', 'an', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were']);
     const words = text.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/);
     const freq: Record<string, number> = {};
     words.forEach(w => {
@@ -26,7 +26,7 @@ export const localGenerateCoverLetter = async (
 ): Promise<string> => {
     const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     const keywords = extractKeywords(description);
-    const targetName = (company === "Review Required" || !company) ? "Hiring Manager" : company;
+    const targetName = (!company || company.toLowerCase().includes('unknown')) ? "Hiring Manager" : company;
     
     return `${userName}\n${userEmail}\n${today}\n\n${targetName}\n\nRE: Application for ${title}\n\nDear ${targetName},\n\nI am writing to express my strong interest in the ${title} position at ${targetName}. Having reviewed the job description, I am excited about the opportunity to contribute my skills in ${keywords.slice(0, 3).join(', ')} to your team. My experience aligns closely with your requirements, and I am eager to discuss how my background can benefit your organization.\n\nThank you for your time and consideration.\n\nSincerely,\n\n${userName}`;
 };
@@ -39,11 +39,10 @@ export const localCustomizeResume = async (
     email: string
 ): Promise<string> => {
     const keywords = extractKeywords(description);
-    const targetCompany = (company === "Review Required" || !company) ? "Your Organization" : company;
+    const targetCompany = (!company || company.toLowerCase().includes('unknown')) ? "Your Organization" : company;
     
     const targetedSummary = `\nCONTACT: ${email}\n\nPROFESSIONAL SUMMARY FOR ${targetCompany.toUpperCase()}\n--------------------------------------------------\nDedicated professional targeting the ${title} role. Relevant expertise: ${keywords.join(', ')}.\n`;
     
-    // Simple replacement logic for email in text
     let newResume = originalResume.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, email);
     
     if (newResume.match(/SUMMARY|OBJECTIVE/i)) {
@@ -54,23 +53,56 @@ export const localCustomizeResume = async (
     return newResume;
 };
 
+// STRICT EXTRACTION REGEX
 const JOB_TITLES_REGEX = /(?:software|systems|data|site|reliability|qa|test|frontend|backend|full.?stack|devops|cloud|network|security|product|project|program|account|sales|marketing|business|customer|support|human|hr|legal|finance|operations)\s+(?:engineer|developer|architect|admin|manager|director|lead|specialist|analyst|associate|representative|executive|consultant)|programmer|coder|technician|designer/i;
-const BLACKLIST_REGEX = /(unsubscribe|privacy|policy|view in browser|profile|settings|preferences|help|support|login|sign in|forgot password|terms|conditions|read more|apply now|click here|browser|email me|alert)/i;
+const NOISE_REGEX = /(view profile|settings|unsubscribe|privacy|notification|joined linkedin|congratulate|security alert|password|sign in|help center|support|login|terms of service|copyright|all rights reserved|update your|newsletter|daily digest|weekly digest)/i;
+const COMPANY_EXTRACT_REGEX = /(?:at|with|@)\s+([A-Z][a-zA-Z0-9]+(?:\s+[A-Z][a-zA-Z0-9]+)*)/;
 
 export const localExtractJobs = (html: string, userKeywords: string[] = []): any[] => {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
     const jobs: any[] = [];
     const links = doc.querySelectorAll('a');
+    
     links.forEach(a => {
         const href = a.getAttribute('href');
-        let text = a.textContent?.trim() || "";
-        if (!href || text.length < 4 || text.length > 100) return;
-        if (BLACKLIST_REGEX.test(text)) return;
-        let isMatch = userKeywords.length > 0 ? userKeywords.some(kw => text.toLowerCase().includes(kw.toLowerCase())) : JOB_TITLES_REGEX.test(text);
+        let text = a.innerText?.trim() || a.textContent?.trim() || "";
+        
+        // Basic filtering
+        if (!href || text.length < 5 || text.length > 80) return;
+        if (NOISE_REGEX.test(text)) return;
+        
+        // Strict job title matching
+        let isMatch = userKeywords.length > 0 
+            ? userKeywords.some(kw => text.toLowerCase().includes(kw.toLowerCase())) 
+            : JOB_TITLES_REGEX.test(text);
+            
         if (isMatch) {
-            jobs.push({ title: text, company: "Review Required", location: "Remote/Hybrid", applicationUrl: href, matchScore: 80 });
+            // Try to find company name in parent elements (Python-like DOM traversal)
+            let company = "Review Required";
+            let parent = a.parentElement;
+            let depth = 0;
+            while (parent && depth < 3) {
+                const parentText = parent.textContent || "";
+                const match = parentText.match(COMPANY_EXTRACT_REGEX);
+                if (match && match[1]) {
+                    company = match[1];
+                    break;
+                }
+                parent = parent.parentElement;
+                depth++;
+            }
+
+            jobs.push({ 
+                title: text, 
+                company: company, 
+                location: "Remote/Hybrid", 
+                applicationUrl: href, 
+                matchScore: 80 
+            });
         }
     });
-    return Array.from(new Map(jobs.map(item => [item.applicationUrl, item])).values()).slice(0, 10); 
+
+    // Remove duplicates based on URL
+    return Array.from(new Map(jobs.map(item => [item.applicationUrl, item])).values()).slice(0, 20); 
 };

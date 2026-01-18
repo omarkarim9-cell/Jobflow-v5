@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { UserProfile, Job } from '../app-types';
 import { 
@@ -8,7 +9,9 @@ import {
     Upload, 
     Loader2, 
     Save, 
-    RotateCcw
+    RotateCcw,
+    Mail,
+    Phone
 } from 'lucide-react';
 import { NotificationType } from './NotificationToast';
 import { translations, LanguageCode } from '../services/localization';
@@ -59,7 +62,7 @@ export const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdate, showN
       
       onUpdate(updatedProfile);
       setIsDirty(false);
-      showNotification("Settings saved and synced to cloud.", 'success');
+      showNotification("Cloud profile successfully updated.", 'success');
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -74,11 +77,11 @@ export const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdate, showN
             setFormData(prev => ({ ...prev, resumeFileName: file.name }));
             setIsDirty(true);
             setIsUploading(false);
-            showNotification(`Resume loaded. Don't forget to save.`, 'success');
+            showNotification(`Resume imported. Please save to sync.`, 'success');
         };
         reader.readAsText(file);
     } else {
-        showNotification("Please upload a .txt file.", 'error');
+        showNotification("Standard text format (.txt) required.", 'error');
     }
   };
 
@@ -86,79 +89,109 @@ export const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdate, showN
     <div className="max-w-4xl mx-auto space-y-8 pb-40 animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
       <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm relative overflow-hidden">
         <div className="absolute top-0 left-0 w-2 h-full bg-indigo-600"></div>
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-6">
-            <div className="flex items-center gap-6">
-                <div className="w-24 h-24 rounded-3xl bg-slate-100 flex items-center justify-center overflow-hidden border-4 border-white shadow-xl">
-                    <User className="w-10 h-10 text-slate-300" />
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-10">
+            <div className="flex items-center gap-8 flex-col sm:flex-row text-center sm:text-left">
+                <div className="w-28 h-28 rounded-[2.5rem] bg-indigo-600 flex items-center justify-center overflow-hidden border-4 border-white shadow-2xl relative group">
+                    <User className="w-12 h-12 text-white" />
                 </div>
                 <div>
-                    <h2 className="text-3xl font-black text-slate-900">{formData.fullName}</h2>
-                    <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">{formData.email}</p>
+                    <h2 className="text-3xl font-black text-slate-900 tracking-tight">{formData.fullName}</h2>
+                    <p className="text-xs font-black text-indigo-600 mt-1 uppercase tracking-[0.2em]">Profile Verified</p>
                 </div>
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-3 w-full sm:w-auto">
                  <button 
                   onClick={handleSave} 
                   disabled={!isDirty} 
-                  className={`flex px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl items-center gap-2 ${
+                  className={`w-full sm:w-auto flex px-10 py-5 rounded-[1.5rem] font-black text-xs uppercase tracking-widest transition-all shadow-xl items-center justify-center gap-2 ${
                     isDirty 
                     ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-indigo-100' 
                     : 'bg-slate-100 text-slate-400 shadow-none cursor-not-allowed'
                   }`}
                 >
                   {isDirty && <CheckCircle2 className="w-4 h-4" />}
-                  Save Changes
+                  Save Profile
                 </button>
             </div>
         </div>
       </div>
 
-      <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm">
-        <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-10 flex items-center">
-            <Briefcase className="w-5 h-5 mr-4 text-indigo-600" /> Job Preferences
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-           <div className="space-y-4">
-               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('target_roles')}</label>
-               <input 
-                 type="text" 
-                 className="w-full p-5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 transition-all" 
-                 value={rolesInput} 
-                 placeholder="e.g. React Developer, UI Designer"
-                 onChange={(e) => { setRolesInput(e.target.value); setIsDirty(true); }} 
-               />
-           </div>
-           <div className="space-y-4">
-               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('target_loc')}</label>
-               <input 
-                 type="text" 
-                 className="w-full p-5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500 transition-all" 
-                 value={locationsInput} 
-                 placeholder="e.g. Remote, New York, Europe"
-                 onChange={(e) => { setLocationsInput(e.target.value); setIsDirty(true); }} 
-               />
-           </div>
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm">
+            <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-10 flex items-center">
+                <User className="w-5 h-5 mr-4 text-indigo-600" /> Identity
+            </h3>
+            <div className="space-y-6">
+                <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Full Name</label>
+                    <div className="relative">
+                        <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                        <input 
+                            className="w-full pl-11 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500"
+                            value={formData.fullName}
+                            onChange={(e) => { setFormData({...formData, fullName: e.target.value}); setIsDirty(true); }}
+                        />
+                    </div>
+                </div>
+                <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Phone</label>
+                    <div className="relative">
+                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+                        <input 
+                            className="w-full pl-11 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500"
+                            value={formData.phone}
+                            onChange={(e) => { setFormData({...formData, phone: e.target.value}); setIsDirty(true); }}
+                        />
+                    </div>
+                </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm">
+            <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-10 flex items-center">
+                <Briefcase className="w-5 h-5 mr-4 text-indigo-600" /> Career Targeting
+            </h3>
+            <div className="space-y-6">
+                <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('target_roles')}</label>
+                    <input 
+                        className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500"
+                        value={rolesInput}
+                        placeholder="React Lead, Node Dev..."
+                        onChange={(e) => { setRolesInput(e.target.value); setIsDirty(true); }}
+                    />
+                </div>
+                <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Preferred Locations</label>
+                    <input 
+                        className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500"
+                        value={locationsInput}
+                        placeholder="Remote, NYC..."
+                        onChange={(e) => { setLocationsInput(e.target.value); setIsDirty(true); }}
+                    />
+                </div>
+            </div>
+          </div>
       </div>
 
       <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
             <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center">
-                <FileText className="w-5 h-5 mr-4 text-indigo-600" /> Master Resume
+                <FileText className="w-5 h-5 mr-4 text-indigo-600" /> Master Knowledge Base
             </h3>
             <div className="flex items-center gap-3">
                  <button 
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center gap-2 px-5 py-3 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-100 transition-all border border-indigo-100"
+                    className="flex items-center gap-2 px-6 py-4 bg-indigo-50 text-indigo-600 rounded-[1rem] text-[10px] font-black uppercase tracking-widest hover:bg-indigo-100 transition-all border border-indigo-100"
                 >
                     {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                    Upload Resume (.txt)
+                    Import Resume
                 </button>
                 <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".txt" className="hidden" />
             </div>
         </div>
         <textarea 
-            className="w-full h-96 p-8 bg-slate-50 border border-slate-200 rounded-3xl font-mono text-[11px] text-slate-600 resize-none leading-relaxed outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+            className="w-full h-96 p-8 bg-slate-50 border border-slate-200 rounded-[2rem] font-mono text-[11px] text-slate-600 resize-none leading-loose outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
             value={localResume}
             onChange={(e) => { setLocalResume(e.target.value); setIsDirty(true); }}
         />
@@ -166,14 +199,14 @@ export const Settings: React.FC<SettingsProps> = ({ userProfile, onUpdate, showN
 
       {isDirty && (
           <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[60] w-[90%] max-w-2xl animate-in slide-in-from-bottom-10 duration-500">
-              <div className="bg-slate-900/95 backdrop-blur-xl text-white p-6 rounded-[2.5rem] shadow-2xl flex items-center justify-between border border-white/10">
+              <div className="bg-slate-900/95 backdrop-blur-xl text-white p-8 rounded-[2.5rem] shadow-2xl flex items-center justify-between border border-white/10">
                   <div className="hidden sm:block">
-                      <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-0.5">Unsaved Changes</p>
-                      <p className="text-xs font-bold opacity-60">Sync your master profile now</p>
+                      <p className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] mb-1">Unsaved Profile Changes</p>
+                      <p className="text-xs font-bold opacity-60">Sync your latest details to the cloud</p>
                   </div>
-                  <div className="flex items-center gap-3 w-full sm:w-auto">
-                      <button onClick={() => window.location.reload()} className="flex-1 sm:flex-none px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-all"><RotateCcw className="w-3 h-3 mr-2 inline" />Discard</button>
-                      <button onClick={handleSave} className="flex-[2] sm:flex-none px-10 py-4 bg-indigo-600 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-indigo-500 transition-all shadow-lg"><Save className="w-4 h-4" />Save Now</button>
+                  <div className="flex items-center gap-4 w-full sm:w-auto">
+                      <button onClick={() => window.location.reload()} className="flex-1 sm:flex-none px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-white transition-all"><RotateCcw className="w-4 h-4 mr-2 inline" />Discard</button>
+                      <button onClick={handleSave} className="flex-[2] sm:flex-none px-12 py-5 bg-indigo-600 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-900/40"><Save className="w-4 h-4" />Sync Cloud</button>
                   </div>
               </div>
           </div>

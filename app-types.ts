@@ -1,3 +1,4 @@
+
 export enum JobStatus {
   DETECTED = 'Detected',
   SAVED = 'Saved',
@@ -22,7 +23,8 @@ export enum ViewState {
   SETTINGS = 'SETTINGS',
   SUPPORT = 'SUPPORT',
   SUBSCRIPTION = 'SUBSCRIPTION',
-  DEBUG = 'DEBUG'
+  DEBUG = 'DEBUG',
+  MANUAL = 'MANUAL'
 }
 
 export interface Job {

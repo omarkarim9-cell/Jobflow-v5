@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Modality, Type } from "@google/genai";
 import { Job, UserProfile, JobStatus } from "../app-types";
 
@@ -13,6 +14,7 @@ export const analyzeJobsWithAi = async (html: string, resume: string, token: str
         Email HTML: ${html.substring(0, 15000)}
         
         TASK: Extract job listings. Rank fit 0-100.
+        Filter out irrelevant notifications, newsletter updates, or recruiter connection requests. Focus ONLY on actual job postings.
         Return structured JSON.`,
         config: {
             responseMimeType: "application/json",
@@ -49,7 +51,7 @@ export const analyzeJobsWithAi = async (html: string, resume: string, token: str
 export const generateAudioBriefing = async (job: Job, profile: UserProfile): Promise<string> => {
     const ai = getAi();
     const prompt = `Say cheerfully: Hi ${profile.fullName.split(' ')[0]}! I've analyzed the ${job.title} role at ${job.company}. 
-    Based on your resume, this is a ${job.matchScore}% match. Let's get to work!`;
+    Based on your resume, this is a ${job.matchScore}% match. I've tailored a custom briefing for you. Let's get to work!`;
 
     const response = await ai.models.generateContent({
         model: "gemini-2.5-flash-preview-tts",
@@ -73,10 +75,12 @@ export const generateInterviewQuestions = async (job: Job, profile: UserProfile)
     const ai = getAi();
     const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: `Generate 3 practice interview questions for:
+        contents: `Generate exactly 10 comprehensive practice interview questions for:
         Role: ${job.title} at ${job.company}
         Description: ${job.description.substring(0, 1000)}
-        Candidate: ${profile.resumeContent.substring(0, 500)}`,
+        Candidate: ${profile.resumeContent.substring(0, 1000)}
+        
+        Provide a mix of technical, behavioral, and role-specific questions.`,
         config: {
             responseMimeType: "application/json",
             responseSchema: {
@@ -125,7 +129,7 @@ export const searchNearbyJobs = async (lat: number, lng: number, role: string): 
     const ai = getAi();
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      contents: `Find hiring companies and job openings for "${role}" near my coordinates.`,
+      contents: `Find hiring companies and current job openings for the specific role "${role}" within a 20km radius of the coordinates latitude ${lat} and longitude ${lng}. Do not return generic locations.`,
       config: {
         tools: [{googleMaps: {}}],
         toolConfig: {
