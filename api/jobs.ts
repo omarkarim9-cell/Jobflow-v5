@@ -13,9 +13,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
       const authRequest = await clerkClient.authenticateRequest(req as any);
       const auth = authRequest.toAuth();
-      userId = (auth as any)?.userId || null;
+      userId = auth?.userId || null;
     } catch (e) {
-      console.warn('[API/JOBS] Auth verification failed');
+      console.warn('[API/JOBS] Auth verification failed:', e);
     }
 
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });

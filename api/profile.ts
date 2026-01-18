@@ -13,15 +13,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     let userId: string | null = null;
     try {
+      // Use standard header extraction for resilience
       const authRequest = await clerkClient.authenticateRequest(req as any);
       const auth = authRequest.toAuth();
-      userId = (auth as any)?.userId || null;
+      userId = auth?.userId || null;
     } catch (e) {
-      console.error('[API/PROFILE] Auth verification failed');
+      console.error('[API/PROFILE] Auth verification failed:', e);
     }
 
     if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Unauthorized - Invalid or missing Clerk session.' });
     }
 
     const sql = neon(dbUrl);
