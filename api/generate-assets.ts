@@ -12,19 +12,66 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { userId } = authRequest.toAuth() as any;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-    const { job, profile } = req.body;
-    if (!job || !profile) return res.status(400).json({ error: 'Missing job or profile data' });
+    const { jobTitle, company, description, resume, name, email } = req.body;
+    if (!jobTitle || !description || !resume) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
 
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: `Generate a custom application summary for the ${job.title} role at ${job.company}. 
-      Context: ${profile.resumeContent.substring(0, 500)}`,
-    });
 
-    return res.status(200).json({ text: response.text || "" });
+    // Generate both resume and cover letter in parallel
+    const [resumeResponse, letterResponse] = await Promise.all([
+      // Tailored Resume
+      ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: `Tailor this resume for the ${jobTitle} position at ${company}.
+
+Job Description: ${description}
+
+Original Resume: ${resume}
+
+Instructions:
+1. Reorder experience to highlight relevant skills for this specific role
+2. Match keywords from the job description
+3. Emphasize achievements with metrics
+4. Keep the same professional structure
+5. Focus on ATS optimization
+
+Return ONLY the tailored resume text, no explanations or markdown.`,
+        config: {
+          systemInstruction: "You are a professional resume writer specializing in ATS optimization and role-specific tailoring."
+        }
+      }),
+
+      // Cover Letter
+      ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: `Write a professional cover letter for ${name} (${email}) applying to ${jobTitle} at ${company}.
+
+Job Description: ${description}
+
+Candidate Resume: ${resume}
+
+Instructions:
+1. Keep under 400 words
+2. Match candidate skills to job requirements
+3. Use professional, confident tone
+4. Include specific accomplishments from resume
+5. NO placeholders - use actual company name and job title
+
+Return ONLY the cover letter text, no explanations or markdown.`,
+        config: {
+          systemInstruction: "You are an expert career coach writing professional, ATS-optimized cover letters."
+        }
+      })
+    ]);
+
+    return res.status(200).json({
+      resume: resumeResponse.text || "",
+      letter: letterResponse.text || ""
+    });
   } catch (error: any) {
     console.error('[API/GENERATE-ASSETS] Error:', error.message);
-    return res.status(500).json({ error: 'Internal Server Error' });
+    return res.status(500).json({ error: 'Internal Server Error', details: error.message });
   }
 }

@@ -48,11 +48,13 @@ import {
 import { JobDetail } from './JobDetail';
 
 const OWNER_EMAIL = 'omar.karim9@gmail.com';
-
+const handleNavigate = useCallback((view: ViewState) => {
+    setSelectedJobId(null);  // Close job detail
+    setCurrentView(view);
+}, []);
 const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
   const { user, isLoaded, isSignedIn } = useUser();
   const { getToken, signOut } = useAuth();
-  
   const [loading, setLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -175,37 +177,63 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
     );
   }
 
-  // 4. Onboarding (If no profile found in DB)
-  // 4. Create default profile if missing (skip onboarding)
-if (!userProfile && user) {
-    const defaultProfile: UserProfile = {
-        id: user.id,
-        fullName: user.fullName || '',
-        email: user.primaryEmailAddress?.emailAddress || '',
-        phone: '',
-        resumeContent: '',
-        resumeFileName: '',
-        preferences: {
-            targetRoles: [],
-            targetLocations: [],
-            minSalary: '',
-            remoteOnly: false,
-            language: 'en'
-        },
-        connectedAccounts: [],
-        plan: 'pro',
-        onboardedAt: new Date().toISOString()
+  // 4. Initialize profile on first load
+useEffect(() => {
+    const initProfile = async () => {
+        if (!user || userProfile || !isSignedIn || isDemo) return;
+        
+        try {
+            const token = await getToken();
+            if (!token) return;
+            
+            // Try to load existing profile
+            let profile = await getUserProfile(token);
+            
+            // If no profile, create default
+            if (!profile) {
+                profile = {
+                    id: user.id,
+                    fullName: user.fullName || '',
+                    email: user.primaryEmailAddress?.emailAddress || '',
+                    phone: '',
+                    resumeContent: '',
+                    resumeFileName: '',
+                    preferences: {
+                        targetRoles: [],
+                        targetLocations: [],
+                        minSalary: '',
+                        remoteOnly: false,
+                        language: 'en'
+                    },
+                    connectedAccounts: [],
+                    plan: 'pro',
+                    onboardedAt: new Date().toISOString()
+                };
+                
+                await saveUserProfile(profile, token);
+            }
+            
+            setUserProfile(profile);
+        } catch (error) {
+            console.error('Profile init error:', error);
+        } finally {
+            setLoading(false);
+        }
     };
     
-    // Set profile immediately to show dashboard
-    setUserProfile(defaultProfile);
-    
-    // Save to DB in background (non-blocking)
-    if (!isDemo) {
-        getToken().then(token => {
-            if (token) saveUserProfile(defaultProfile, token);
-        });
+    if (isLoaded && isSignedIn && !userProfile) {
+        initProfile();
     }
+}, [user, userProfile, isSignedIn, isLoaded, getToken, isDemo]);
+/*
+// If no profile yet, show loading
+if (!userProfile && (isSignedIn || isDemo)) {
+    return (
+        <div className="h-screen flex flex-col items-center justify-center bg-slate-50">
+            <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mb-2"/>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Loading Profile...</p>
+        </div>
+    );
 }
 
 // If still no profile and no user, show loading
@@ -217,7 +245,7 @@ if (!userProfile) {
         </div>
     );
 }
-
+*/
   // 5. Main App
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden" dir={isRtl ? 'rtl' : 'ltr'}>
@@ -237,23 +265,23 @@ if (!userProfile) {
           {!isDemo && <UserButton afterSignOutUrl="/" />}
         </div>
         <div className="flex-1 px-4 py-2 overflow-y-auto custom-scrollbar">
-          <button onClick={() => setCurrentView(ViewState.DASHBOARD)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.DASHBOARD ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><LayoutDashboard className="w-5 h-5 me-3" /> Dashboard</button>
-          <button onClick={() => setCurrentView(ViewState.SELECTED_JOBS)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.SELECTED_JOBS ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><SearchIcon className="w-5 h-5 me-3" /> Scanned Leads</button>
-          <button onClick={() => setCurrentView(ViewState.TRACKER)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.TRACKER ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><List className="w-5 h-5 me-3" /> Applications</button>
-          <button onClick={() => setCurrentView(ViewState.EMAILS)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.EMAILS ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><Mail className="w-5 h-5 me-3" /> Inbox Scanner</button>
+          <button onClick={() => handleNavigate(ViewState.DASHBOARD)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.DASHBOARD ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><LayoutDashboard className="w-5 h-5 me-3" /> Dashboard</button>
+          <button onClick={() => handleNavigate(ViewState.SELECTED_JOBS)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.SELECTED_JOBS ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><SearchIcon className="w-5 h-5 me-3" /> Scanned Leads</button>
+          <button onClick={() => handleNavigate(ViewState.TRACKER)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.TRACKER ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><List className="w-5 h-5 me-3" /> Applications</button>
+          <button onClick={() => handleNavigate(ViewState.EMAILS)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.EMAILS ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><Mail className="w-5 h-5 me-3" /> Inbox Scanner</button>
           
           <div className="my-2 border-t border-slate-100" />
           <p className="px-3 py-1 text-[10px] font-black uppercase text-slate-400 tracking-widest">Intelligence</p>
-          <button onClick={() => setCurrentView(ViewState.ANALYTICS)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.ANALYTICS ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><BarChart3 className="w-5 h-5 me-3" /> Analytics</button>
-          <button onClick={() => setCurrentView(ViewState.DISCOVERY)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.DISCOVERY ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><MapIcon className="w-5 h-5 me-3" /> Discovery</button>
+          <button onClick={() => handleNavigate(ViewState.ANALYTICS)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.ANALYTICS ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><BarChart3 className="w-5 h-5 me-3" /> Analytics</button>
+          <button onClick={() => handleNavigate(ViewState.DISCOVERY)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.DISCOVERY ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><MapIcon className="w-5 h-5 me-3" /> Discovery</button>
           
           <div className="my-2 border-t border-slate-100" />
           <p className="px-3 py-1 text-[10px] font-black uppercase text-slate-400 tracking-widest">System</p>
-          <button onClick={() => setCurrentView(ViewState.SETTINGS)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.SETTINGS ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><SettingsIcon className="w-5 h-5 me-3" /> Settings</button>
-          <button onClick={() => setCurrentView(ViewState.SUBSCRIPTION)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.SUBSCRIPTION ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><CreditCard className="w-5 h-5 me-3" /> Subscription</button>
-          <button onClick={() => setCurrentView(ViewState.MANUAL)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.MANUAL ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><Book className="w-5 h-5 me-3" /> User Guide</button>
-          <button onClick={() => setCurrentView(ViewState.SUPPORT)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.SUPPORT ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><LifeBuoy className="w-5 h-5 me-3" /> Support</button>
-          {isOwner && <button onClick={() => setCurrentView(ViewState.DEBUG)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mt-4 ${currentView === ViewState.DEBUG ? 'bg-slate-900 text-white font-bold' : 'text-slate-400 hover:bg-slate-100'}`}><Terminal className="w-5 h-5 me-3" /> Dev Console</button>}
+          <button onClick={() => handleNavigate(ViewState.SETTINGS)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.SETTINGS ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><SettingsIcon className="w-5 h-5 me-3" /> Settings</button>
+          <button onClick={() => handleNavigate(ViewState.SUBSCRIPTION)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.SUBSCRIPTION ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><CreditCard className="w-5 h-5 me-3" /> Subscription</button>
+          <button onClick={() => handleNavigate(ViewState.MANUAL)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.MANUAL ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><Book className="w-5 h-5 me-3" /> User Guide</button>
+          <button onClick={() => handleNavigate(ViewState.SUPPORT)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.SUPPORT ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><LifeBuoy className="w-5 h-5 me-3" /> Support</button>
+          {isOwner && <button onClick={() => handleNavigate(ViewState.DEBUG)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mt-4 ${currentView === ViewState.DEBUG ? 'bg-slate-900 text-white font-bold' : 'text-slate-400 hover:bg-slate-100'}`}><Terminal className="w-5 h-5 me-3" /> Dev Console</button>}
         </div>
         <div className="p-4 border-t border-slate-200">
             <button onClick={() => signOut()} className="w-full flex items-center px-3 py-2.5 rounded-lg text-slate-400 hover:text-red-600 font-bold text-xs uppercase tracking-widest">
@@ -279,7 +307,7 @@ if (!userProfile) {
                                     <p className="text-sm font-medium opacity-80 mt-1 max-w-lg">Unlock deep intelligence features by uploading your resume.</p>
                                 </div>
                             </div>
-                            <button onClick={() => setCurrentView(ViewState.SETTINGS)} className="z-10 px-8 py-4 bg-white text-indigo-600 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-50 transition-all flex items-center gap-2 group/btn">Get Started <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" /></button>
+                            <button onClick={() => handleNavigate(ViewState.SETTINGS)} className="z-10 px-8 py-4 bg-white text-indigo-600 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-50 transition-all flex items-center gap-2 group/btn">Get Started <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" /></button>
                         </div>
                     )}
                     <DashboardStats jobs={jobs} userProfile={userProfile!} />
