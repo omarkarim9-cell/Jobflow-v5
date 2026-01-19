@@ -48,10 +48,11 @@ import {
 import { JobDetail } from './JobDetail';
 
 const OWNER_EMAIL = 'omar.karim9@gmail.com';
-const handleNavigate = useCallback((view: ViewState) => {
+/*const handleNavigate = useCallback((view: ViewState) => {
     setSelectedJobId(null);  // Close job detail
     setCurrentView(view);
 }, []);
+*/
 const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
   const { user, isLoaded, isSignedIn } = useUser();
   const { getToken, signOut } = useAuth();
@@ -66,15 +67,18 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
   const [sessionAccount, setSessionAccount] = useState<EmailAccount | null>(null);
   const [notification, setNotification] = useState<{message: string, type: NotificationType} | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  // Place this inside the AppContent component after your useState declarations
+const handleNavigate = useCallback((view: ViewState) => {
+  setSelectedJobId(null);
+  setCurrentView(view);
+}, []);
 
   const isSyncLocked = useRef(false);
   const isOwner = user?.primaryEmailAddress?.emailAddress === OWNER_EMAIL || isDemo;
   const isRtl = userProfile?.preferences?.language === 'ar';
-
   const showNotification = useCallback((message: string, type: NotificationType) => {
       setNotification({ message, type });
   }, []);
-
   const syncData = useCallback(async (isManual: boolean = false) => {
       if (!navigator.onLine || isSyncLocked.current) return;
       
