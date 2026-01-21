@@ -1,58 +1,25 @@
-import { VercelRequest, VercelResponse } from "@vercel/node";
-import { clerkClient, verifyToken } from "@clerk/clerk-sdk-node";
+import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { getAuth } from "@clerk/backend";
 import { neon } from "@neondatabase/serverless";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const dbUrl = process.env.DATABASE_URL;
     if (!dbUrl) {
-      return res.status(500).json({ error: "DATABASE_URL configuration missing." });
+      return res.status(500).json({ error: "DATABASE_URL missing" });
     }
 
-    // 1. Extract token
-    const authHeader = req.headers.authorization;
-    const cookieHeader = req.headers.cookie || "";
+    const { userId } = getAuth(req);
 
-    let token: string | null = null;
-
-    if (authHeader?.startsWith("Bearer ")) {
-      token = authHeader.slice("Bearer ".length);
-    } else {
-      const match = cookieHeader.match(/(?:^|; )__session=([^;]+)/);
-      if (match) token = decodeURIComponent(match[1]);
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
     }
 
-    if (!token) {
-      return res.status(401).json({ error: "No token provided" });
-    }
-
-    // 2. Verify token
-    const verified = await verifyToken(token, {
-      secretKey: process.env.CLERK_SECRET_KEY,
-    });
-
-    const sessionId = verified.sessionId;
-    if (!sessionId) {
-      return res.status(401).json({ error: "Invalid token" });
-    }
-
-    // 3. Fetch session
-    const session = await clerkClient.sessions.getSession(sessionId);
-    if (!session || session.status !== "active") {
-      return res.status(401).json({ error: "Session not active" });
-    }
-
-    const userId = session.userId;
-
-    // 4. Neon SQL client
     const sql = neon(dbUrl);
 
-    // -------------------------------
-    // GET /api/jobs
-    // -------------------------------
     if (req.method === "GET") {
       const result = await sql`
-        SELECT * FROM jobs 
+        SELECT * FROM jobs
         WHERE user_id = ${userId}
         ORDER BY created_at DESC
       `;
@@ -79,11 +46,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ jobs });
     }
 
-    // -------------------------------
-    // POST /api/jobs
-    // -------------------------------
     if (req.method === "POST") {
       const body = req.body;
+
       if (!body || !body.id) {
         return res.status(400).json({ error: "Invalid Job Payload" });
       }
@@ -134,17 +99,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ success: true, job: result[0] });
     }
 
-    // -------------------------------
-    // DELETE /api/jobs?id=...
-    // -------------------------------
     if (req.method === "DELETE") {
       const jobId = req.query.id as string;
+
       if (!jobId) {
         return res.status(400).json({ error: "Missing Job ID" });
       }
 
       await sql`
-        DELETE FROM jobs 
+        DELETE FROM jobs
         WHERE id = ${jobId} AND user_id = ${userId}
       `;
 

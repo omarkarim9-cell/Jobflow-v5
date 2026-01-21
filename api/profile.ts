@@ -1,67 +1,33 @@
-import { clerkClient, verifyToken } from "@clerk/clerk-sdk-node";
+import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { getAuth } from "@clerk/backend";
 import { Pool } from "pg";
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
-export default async function handler(req, res) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
-    // 1. Extract token
-    const authHeader = req.headers.authorization;
-    const cookieHeader = req.headers.cookie || "";
+    const { userId } = getAuth(req);
 
-    let token = null;
-
-    if (authHeader?.startsWith("Bearer ")) {
-      token = authHeader.slice("Bearer ".length);
-    } else {
-      const match = cookieHeader.match(/(?:^|; )__session=([^;]+)/);
-      if (match) token = decodeURIComponent(match[1]);
+    if (!userId) {
+      return res.status(401).json({ ok: false, error: "Unauthorized" });
     }
 
-    if (!token) {
-      return res.status(401).json({ ok: false, error: "No token provided" });
-    }
-
-    // 2. Verify token
-    const verified = await verifyToken(token, {
-      secretKey: process.env.CLERK_SECRET_KEY,
-    });
-
-    const sessionId = verified.sessionId;
-    if (!sessionId) {
-      return res.status(401).json({ ok: false, error: "Invalid token" });
-    }
-
-    // 3. Fetch session
-    const session = await clerkClient.sessions.getSession(sessionId);
-    if (!session || session.status !== "active") {
-      return res.status(401).json({ ok: false, error: "Session not active" });
-    }
-
-    const clerkUserId = session.userId;
-
-    // 4. Handle GET (load profile)
     if (req.method === "GET") {
       const client = await pool.connect();
       try {
         const result = await client.query(
           "SELECT * FROM profiles WHERE clerk_user_id = $1 LIMIT 1",
-          [clerkUserId]
+          [userId]
         );
 
-        if (result.rowCount === 0) {
-          return res.status(200).json(null);
-        }
-
-        return res.status(200).json(result.rows[0]);
+        return res.status(200).json(result.rows[0] || null);
       } finally {
         client.release();
       }
     }
 
-    // 5. Handle POST (save profile)
     if (req.method === "POST") {
       const body = req.body;
 
@@ -89,7 +55,7 @@ export default async function handler(req, res) {
           RETURNING *;
         `,
           [
-            clerkUserId,
+            userId,
             body.email,
             body.fullName,
             body.phone,
