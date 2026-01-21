@@ -10,17 +10,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const { userId } = getAuth(req);
-
     if (!userId) {
       return res.status(401).json({ error: "Unauthorized" });
     }
 
     const sql = neon(dbUrl);
 
+    // Resolve internal profile.id from Clerk userId
+    const profileRows = await sql`
+      SELECT id
+      FROM profiles
+      WHERE clerk_user_id = ${userId}
+      LIMIT 1
+    `;
+    if (!profileRows[0]) {
+      return res.status(404).json({ error: "Profile not found for user" });
+    }
+    const profileId = profileRows[0].id as string;
+
     if (req.method === "GET") {
       const result = await sql`
-        SELECT * FROM jobs
-        WHERE user_id = ${userId}
+        SELECT *
+        FROM jobs
+        WHERE user_id = ${profileId}
         ORDER BY created_at DESC
       `;
 
@@ -33,7 +45,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         description: job.description || "",
         source: job.source || "Manual",
         detectedAt: job.created_at,
-        status: job.status || "Detected",
+        status: job.status || "saved",
         matchScore: job.match_score || 0,
         requirements: job.data?.requirements || [],
         coverLetter: job.cover_letter,
@@ -47,39 +59,50 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === "POST") {
-      const body = req.body;
+      const body = req.body || {};
 
-      if (!body || !body.id) {
-        return res.status(400).json({ error: "Invalid Job Payload" });
+      if (!body.id) {
+        return res.status(400).json({ error: "Invalid Job Payload: missing id" });
       }
 
-      const jobData = JSON.stringify({
+      const jobData = {
         location: body.location || "",
         salaryRange: body.salaryRange || "",
         requirements: body.requirements || [],
         notes: body.notes || "",
         logoUrl: body.logoUrl || "",
-      });
+      };
 
       const result = await sql`
         INSERT INTO jobs (
-          id, user_id, title, company, description, status, source,
-          application_url, custom_resume, cover_letter, match_score,
-          data, created_at, updated_at
+          id,
+          user_id,
+          title,
+          company,
+          description,
+          status,
+          source,
+          application_url,
+          custom_resume,
+          cover_letter,
+          match_score,
+          data,
+          created_at,
+          updated_at
         )
         VALUES (
           ${body.id},
-          ${userId},
+          ${profileId},
           ${body.title || "Untitled Role"},
           ${body.company || "Unknown Company"},
           ${body.description || ""},
-          ${body.status || "Detected"},
+          ${body.status || "saved"},
           ${body.source || "Manual"},
           ${body.applicationUrl || null},
           ${body.customizedResume || null},
           ${body.coverLetter || null},
           ${body.matchScore || 0},
-          ${jobData},
+          ${JSON.stringify(jobData)},
           NOW(),
           NOW()
         )
@@ -93,7 +116,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           match_score = EXCLUDED.match_score,
           data = EXCLUDED.data,
           updated_at = NOW()
-        RETURNING *
+        RETURNING *;
       `;
 
       return res.status(200).json({ success: true, job: result[0] });
@@ -108,7 +131,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       await sql`
         DELETE FROM jobs
-        WHERE id = ${jobId} AND user_id = ${userId}
+        WHERE id = ${jobId} AND user_id = ${profileId}
       `;
 
       return res.status(200).json({ success: true });
@@ -116,7 +139,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     return res.status(405).json({ error: "Method Not Allowed" });
   } catch (error: any) {
-    console.error("[API/JOBS] Error:", error.message);
+    console.error("[API/JOBS] Error:", error?.message || error);
     return res.status(500).json({ error: "Internal Server Error" });
   }
 }
