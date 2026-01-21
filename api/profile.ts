@@ -1,75 +1,92 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getAuth } from "@clerk/backend";
-import { Pool } from "pg";
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
+import { neon } from "@neondatabase/serverless";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
-    const { userId } = getAuth(req);
+    const dbUrl = process.env.DATABASE_URL;
+    if (!dbUrl) {
+      return res.status(500).json({ ok: false, error: "DATABASE_URL missing" });
+    }
 
+    const { userId } = getAuth(req);
     if (!userId) {
       return res.status(401).json({ ok: false, error: "Unauthorized" });
     }
 
-    if (req.method === "GET") {
-      const client = await pool.connect();
-      try {
-        const result = await client.query(
-          "SELECT * FROM profiles WHERE clerk_user_id = $1 LIMIT 1",
-          [userId]
-        );
+    const sql = neon(dbUrl);
 
-        return res.status(200).json(result.rows[0] || null);
-      } finally {
-        client.release();
-      }
+    if (req.method === "GET") {
+      const rows = await sql`
+        SELECT *
+        FROM profiles
+        WHERE clerk_user_id = ${userId}
+        LIMIT 1
+      `;
+      return res.status(200).json(rows[0] || null);
     }
 
     if (req.method === "POST") {
-      const body = req.body;
+      const body = req.body || {};
 
-      const client = await pool.connect();
-      try {
-        const result = await client.query(
-          `
-          INSERT INTO profiles (
-            id, clerk_user_id, email, full_name, phone, resume_content,
-            preferences, connected_accounts, plan, updated_at
-          )
-          VALUES (
-            gen_random_uuid(), $1, $2, $3, $4, $5,
-            $6::jsonb, $7::jsonb, $8, NOW()
-          )
-          ON CONFLICT (clerk_user_id) DO UPDATE SET
-            email = EXCLUDED.email,
-            full_name = EXCLUDED.full_name,
-            phone = EXCLUDED.phone,
-            resume_content = EXCLUDED.resume_content,
-            preferences = EXCLUDED.preferences,
-            connected_accounts = EXCLUDED.connected_accounts,
-            plan = EXCLUDED.plan,
-            updated_at = NOW()
-          RETURNING *;
-        `,
-          [
-            userId,
-            body.email,
-            body.fullName,
-            body.phone,
-            body.resumeContent,
-            JSON.stringify(body.preferences),
-            JSON.stringify(body.connectedAccounts),
-            body.plan || "free",
-          ]
-        );
+      const email = body.email ?? null;
+      const fullName = body.fullName ?? "";
+      const phone = body.phone ?? "";
+      const resumeContent = body.resumeContent ?? null;
+      const resumeFileName = body.resumeFileName ?? "";
+      const preferences = body.preferences ?? {};
+      const connectedAccounts = body.connectedAccounts ?? {};
+      const plan = body.plan ?? "free";
 
-        return res.status(200).json(result.rows[0]);
-      } finally {
-        client.release();
-      }
+      const rows = await sql`
+        INSERT INTO profiles (
+          id,
+          clerk_user_id,
+          email,
+          full_name,
+          phone,
+          resume_content,
+          resume_file_name,
+          preferences,
+          connected_accounts,
+          plan,
+          updated_at
+        )
+        VALUES (
+          gen_random_uuid(),
+          ${userId},
+          ${email},
+          ${fullName},
+          ${phone},
+          ${resumeContent},
+          ${resumeFileName},
+          ${JSON.stringify(preferences)},
+          ${JSON.stringify(connectedAccounts)},
+          ${plan},
+          NOW()
+        )
+        ON CONFLICT (clerk_user_id) DO UPDATE SET
+          email = EXCLUDED.email,
+          full_name = EXCLUDED.full_name,
+          phone = EXCLUDED.phone,
+          resume_content = CASE
+            WHEN EXCLUDED.resume_content IS NULL OR EXCLUDED.resume_content = ''
+              THEN profiles.resume_content
+            ELSE EXCLUDED.resume_content
+          END,
+          resume_file_name = CASE
+            WHEN EXCLUDED.resume_file_name IS NULL OR EXCLUDED.resume_file_name = ''
+              THEN profiles.resume_file_name
+            ELSE EXCLUDED.resume_file_name
+          END,
+          preferences = EXCLUDED.preferences,
+          connected_accounts = EXCLUDED.connected_accounts,
+          plan = EXCLUDED.plan,
+          updated_at = NOW()
+        RETURNING *;
+      `;
+
+      return res.status(200).json(rows[0]);
     }
 
     return res.status(405).json({ ok: false, error: "Method not allowed" });
