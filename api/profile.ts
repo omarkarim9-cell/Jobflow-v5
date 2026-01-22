@@ -14,7 +14,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   secretKey: process.env.CLERK_SECRET_KEY!,
 });
 
-
     const sql = neon(dbUrl);
 
     if (req.method === "GET") {

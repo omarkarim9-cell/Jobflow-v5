@@ -24,6 +24,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       WHERE clerk_user_id = ${userId}
       LIMIT 1
     `;
+	
     if (!profileRows[0]) {
       return res.status(404).json({ error: "Profile not found for user" });
     }
