@@ -1,24 +1,24 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { requireSession } from "@clerk/backend";
+import { createClerkClient } from "@clerk/backend";
 import { neon } from "@neondatabase/serverless";
+
+const DB_URL = process.env.DATABASE_URL;
+const CLERK_SECRET = process.env.CLERK_SECRET_KEY;
+
+if (!DB_URL) throw new Error("Missing DATABASE_URL env var");
+if (!CLERK_SECRET) throw new Error("Missing CLERK_SECRET_KEY env var");
+
+const sql = neon(DB_URL);
+const clerk = createClerkClient({ secretKey: CLERK_SECRET });
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
-    const dbUrl = process.env.DATABASE_URL;
-    if (!dbUrl) {
-      return res.status(500).json({ error: "DATABASE_URL missing" });
+    // Authenticate via Clerk session
+    const sessionResult = await clerk.sessions.request({ headers: req.headers as any });
+    if (!sessionResult || !sessionResult.userId) {
+      return res.status(401).json({ error: "Unauthorized" });
     }
-
-
-const { session } = await requireSession(req, {
-  secretKey: process.env.CLERK_SECRET_KEY!,
-});
-
-const userId = session.userId;
-
-
-
-    const sql = neon(dbUrl);
+    const userId = sessionResult.userId as string;
 
     // Resolve internal profile.id from Clerk userId
     const profileRows = await sql`
@@ -27,7 +27,6 @@ const userId = session.userId;
       WHERE clerk_user_id = ${userId}
       LIMIT 1
     `;
-	
     if (!profileRows[0]) {
       return res.status(404).json({ error: "Profile not found for user" });
     }
@@ -41,7 +40,7 @@ const userId = session.userId;
         ORDER BY created_at DESC
       `;
 
-      const jobs = result.map((job: any) => ({
+      const jobs = (result || []).map((job: any) => ({
         id: job.id,
         title: job.title || "",
         company: job.company || "",
@@ -49,7 +48,7 @@ const userId = session.userId;
         salaryRange: job.data?.salaryRange || "",
         description: job.description || "",
         source: job.source || "Manual",
-        detectedAt: job.created_at,
+        createdAt: job.created_at,
         status: job.status || "saved",
         matchScore: job.match_score || 0,
         requirements: job.data?.requirements || [],
@@ -64,7 +63,7 @@ const userId = session.userId;
     }
 
     if (req.method === "POST") {
-      const body = req.body || {};
+      const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
 
       if (!body.id) {
         return res.status(400).json({ error: "Invalid Job Payload: missing id" });
@@ -128,8 +127,7 @@ const userId = session.userId;
     }
 
     if (req.method === "DELETE") {
-      const jobId = req.query.id as string;
-
+      const jobId = (req.query.id as string) || (req.body && req.body.id);
       if (!jobId) {
         return res.status(400).json({ error: "Missing Job ID" });
       }

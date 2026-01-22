@@ -1,24 +1,24 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { requireSession } from "@clerk/backend";
+import { createClerkClient } from "@clerk/backend";
 import { neon } from "@neondatabase/serverless";
+
+const DB_URL = process.env.DATABASE_URL;
+const CLERK_SECRET = process.env.CLERK_SECRET_KEY;
+
+if (!DB_URL) throw new Error("Missing DATABASE_URL env var");
+if (!CLERK_SECRET) throw new Error("Missing CLERK_SECRET_KEY env var");
+
+const sql = neon(DB_URL);
+const clerk = createClerkClient({ secretKey: CLERK_SECRET });
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
-    const dbUrl = process.env.DATABASE_URL;
-    if (!dbUrl) {
-      return res.status(500).json({ ok: false, error: "DATABASE_URL missing" });
+    // Authenticate via Clerk session
+    const sessionResult = await clerk.sessions.request({ headers: req.headers as any });
+    if (!sessionResult || !sessionResult.userId) {
+      return res.status(401).json({ ok: false, error: "Unauthorized" });
     }
-
-   import { requireSession } from "@clerk/backend";
-
-const { session } = await requireSession(req, {
-  secretKey: process.env.CLERK_SECRET_KEY!,
-});
-
-const userId = session.userId;
-
-
-    const sql = neon(dbUrl);
+    const userId = sessionResult.userId as string;
 
     if (req.method === "GET") {
       const rows = await sql`
@@ -27,17 +27,17 @@ const userId = session.userId;
         WHERE clerk_user_id = ${userId}
         LIMIT 1
       `;
-      return res.status(200).json(rows[0] || null);
+      return res.status(200).json({ ok: true, profile: rows[0] || null });
     }
 
     if (req.method === "POST") {
-      const body = req.body || {};
+      const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
 
       const email = body.email ?? null;
       const fullName = body.fullName ?? "";
       const phone = body.phone ?? "";
-      const resumeContent = body.resumeContent ?? null;
-      const resumeFileName = body.resumeFileName ?? "";
+      const resumeContent = body.resumeContent ?? null; // null means "no change"
+      const resumeFileName = body.resumeFileName ?? null; // null means "no change"
       const preferences = body.preferences ?? {};
       const connectedAccounts = body.connectedAccounts ?? {};
       const plan = body.plan ?? "free";
@@ -90,12 +90,13 @@ const userId = session.userId;
         RETURNING *;
       `;
 
-      return res.status(200).json(rows[0]);
+      return res.status(200).json({ ok: true, profile: rows[0] });
     }
 
     return res.status(405).json({ ok: false, error: "Method not allowed" });
-  } catch (err) {
+  } catch (err: any) {
     console.error("[API/PROFILE] Error:", err);
-    return res.status(500).json({ ok: false, error: "Internal server error" });
+    const message = err?.message || "Internal server error";
+    return res.status(500).json({ ok: false, error: message });
   }
 }
