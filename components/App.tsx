@@ -361,7 +361,7 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
             </div>
           )}
 
-          {{currentView === ViewState.TRACKER && (
+          {currentView === ViewState.TRACKER && (
   <ApplicationTracker
     jobs={jobs}
     onUpdateStatus={async (id, s) => {
