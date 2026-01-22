@@ -361,7 +361,24 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
             </div>
           )}
 
-          {currentView === ViewState.TRACKER && <ApplicationTracker jobs={jobs} onUpdateStatus={async (id, s) => { const job = jobs.find((j) => j.id === id); if (job) handleUpdateJob({ ...job, status: s }); }} onDelete={async (id) => { setJobs((prev) => prev.filter((j) => j.id !== id)); if (!isDemo) { const token = await getToken({ template: "default" });); if (token) await deleteJobFromDb(id, token); } }} onSelect={(j) => setSelectedJobId(j.id)} />}
+          {{currentView === ViewState.TRACKER && (
+  <ApplicationTracker
+    jobs={jobs}
+    onUpdateStatus={async (id, s) => {
+      const job = jobs.find((j) => j.id === id);
+      if (job) handleUpdateJob({ ...job, status: s });
+    }}
+    onDelete={async (id) => {
+      setJobs((prev) => prev.filter((j) => j.id !== id));
+      if (!isDemo) {
+        const token = await getToken({ template: "default" });
+        if (token) await deleteJobFromDb(id, token);
+      }
+    }}
+    onSelect={(j) => setSelectedJobId(j.id)}
+  />
+)}
+
 
           {currentView === ViewState.SETTINGS && <div className="h-full p-8 overflow-y-auto"><Settings userProfile={userProfile!} onUpdate={handleUpdateProfile} dirHandle={null} onDirHandleChange={() => { }} jobs={jobs} showNotification={showNotification} onReset={() => signOut()} isOwner={isOwner} /></div>}
 
