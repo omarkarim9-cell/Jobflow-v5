@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { auth } from "@clerk/backend";
+import { requireSession } from "@clerk/backend";
 import { neon } from "@neondatabase/serverless";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -9,10 +9,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ ok: false, error: "DATABASE_URL missing" });
     }
 
-    const { userId } = await verifyRequest({
-  headers: req.headers,
+   import { requireSession } from "@clerk/backend";
+
+const { session } = await requireSession(req, {
   secretKey: process.env.CLERK_SECRET_KEY!,
 });
+
+const userId = session.userId;
+
 
     const sql = neon(dbUrl);
 
