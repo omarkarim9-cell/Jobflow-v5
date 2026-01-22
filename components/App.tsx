@@ -88,7 +88,7 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
 
       setIsSyncing(true);
       try {
-        const token = isDemo ? 'demo_token' : await getToken();
+        const token = isDemo ? 'demo_token' : await getToken({ template: "default" });
         if (!token && !isDemo) {
           setLoading(false);
           setIsSyncing(false);
@@ -122,7 +122,7 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
         return [updated, ...prev];
       });
       if (!isDemo) {
-        const token = await getToken();
+        const token = await getToken({ template: "default" });
         if (token) await saveJobToDb(updated, token);
       }
     },
@@ -134,7 +134,7 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
       isSyncLocked.current = true;
       setUserProfile(updated);
       if (!isDemo) {
-        const token = await getToken();
+        const token = await getToken({ template: "default" });
         if (token) {
           await saveUserProfile(updated, token);
         }
@@ -190,7 +190,7 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
       if (!user || userProfile || !isSignedIn || isDemo) return;
 
       try {
-        const token = await getToken();
+       const token = await getToken({ template: "default" });
         if (!token) return;
 
         // Try to load existing profile
@@ -361,7 +361,7 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
             </div>
           )}
 
-          {currentView === ViewState.TRACKER && <ApplicationTracker jobs={jobs} onUpdateStatus={async (id, s) => { const job = jobs.find((j) => j.id === id); if (job) handleUpdateJob({ ...job, status: s }); }} onDelete={async (id) => { setJobs((prev) => prev.filter((j) => j.id !== id)); if (!isDemo) { const token = await getToken(); if (token) await deleteJobFromDb(id, token); } }} onSelect={(j) => setSelectedJobId(j.id)} />}
+          {currentView === ViewState.TRACKER && <ApplicationTracker jobs={jobs} onUpdateStatus={async (id, s) => { const job = jobs.find((j) => j.id === id); if (job) handleUpdateJob({ ...job, status: s }); }} onDelete={async (id) => { setJobs((prev) => prev.filter((j) => j.id !== id)); if (!isDemo) { const token = await getToken({ template: "default" });); if (token) await deleteJobFromDb(id, token); } }} onSelect={(j) => setSelectedJobId(j.id)} />}
 
           {currentView === ViewState.SETTINGS && <div className="h-full p-8 overflow-y-auto"><Settings userProfile={userProfile!} onUpdate={handleUpdateProfile} dirHandle={null} onDirHandleChange={() => { }} jobs={jobs} showNotification={showNotification} onReset={() => signOut()} isOwner={isOwner} /></div>}
 
