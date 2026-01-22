@@ -9,10 +9,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ ok: false, error: "DATABASE_URL missing" });
     }
 
-    const { userId } = auth(req);
-    if (!userId) {
-      return res.status(401).json({ ok: false, error: "Unauthorized" });
-    }
+    const { userId } = await verifyRequest({
+  headers: req.headers,
+  secretKey: process.env.CLERK_SECRET_KEY!,
+});
+
 
     const sql = neon(dbUrl);
 
