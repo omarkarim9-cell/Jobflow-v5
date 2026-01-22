@@ -19,9 +19,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let userId: string;
     try {
       const { payload } = await verifyToken(token, {
-        secretKey: CLERK_SECRET!,
-      });
-      userId = payload.sub;
+  secretKey: CLERK_SECRET,
+});
+
+// Narrow the type
+if (!payload || typeof payload !== "object" || typeof (payload as any).sub !== "string") {
+  return res.status(401).json({ error: "Unauthorized - Invalid token payload" });
+}
+
+userId = (payload as any).sub;
+
     } catch (err) {
       return res.status(401).json({ error: "Unauthorized - Invalid token" });
     }
