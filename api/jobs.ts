@@ -25,11 +25,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     let userId: string;
     try {
-      const { payload } = await verifyToken(token, {
+     const { payload } = await verifyToken(token, {
   issuer: "https://clerk.kush-edu.com",
 });
 
 const userId = payload.sub;
+
 
 
     } catch (err) {
