@@ -1,3 +1,4 @@
+//profile.ts
 import { VercelRequest, VercelResponse } from "@vercel/node";
 import { verifyToken } from "@clerk/backend";
 import { neon } from "@neondatabase/serverless";
@@ -18,16 +19,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     let userId: string;
     try {
-      const { payload } = await verifyToken(token, {
-  secretKey: CLERK_SECRET,
+   const { payload } = await verifyToken(token, {
+  issuer: "https://clerk.kush-edu.com",
 });
 
-// Narrow the type
-if (!payload || typeof payload !== "object" || typeof (payload as any).sub !== "string") {
-  return res.status(401).json({ error: "Unauthorized - Invalid token payload" });
-}
+const userId = payload.sub;
 
-userId = (payload as any).sub;
 
     } catch (err) {
       return res.status(401).json({ error: "Unauthorized - Invalid token" });
