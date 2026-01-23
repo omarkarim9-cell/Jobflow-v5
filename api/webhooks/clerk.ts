@@ -1,4 +1,4 @@
-import { Webhook } from 'svix';
+﻿import { Webhook } from 'svix';
 import { neon } from '@neondatabase/serverless';
 
 export default async function handler(req: any, res: any) {
@@ -58,7 +58,7 @@ export default async function handler(req: any, res: any) {
         ON CONFLICT (id) DO NOTHING
       `;
 
-      console.log(`✅ User ${id} created in Neon`);
+      console.log(`âœ… User ${id} created in Neon`);
       return res.status(200).json({ success: true });
     } catch (error) {
       console.error('Database error:', error);

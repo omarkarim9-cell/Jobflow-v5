@@ -1,5 +1,5 @@
-import { VercelRequest, VercelResponse } from '@vercel/node';
-import { createClerkClient } from '@clerk/backend';
+﻿import { VercelRequest, VercelResponse } from '@vercel/node';
+import { createClerkClient } from '../clerk-shim';
 import { GoogleGenAI } from "@google/genai";
 
 const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
