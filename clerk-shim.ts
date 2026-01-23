@@ -26,6 +26,35 @@ export async function verifyToken(token: string, _opts?: any) {
 }
 
 /**
+ * Build a minimal session-like object that matches common Clerk usage in this repo.
+ * It includes: sessionId, userId, getUserId(), payload, and toAuth() returning auth info.
+ */
+function buildSessionFromPayload(payload: Record<string, any>) {
+  const sessionId = payload.jti ?? null;
+  const userId = payload.sub ?? null;
+
+  const session = {
+    sessionId,
+    userId,
+    getUserId: () => userId,
+    payload,
+    /**
+     * toAuth returns a minimal auth object. Add fields here if your code expects them.
+     */
+    toAuth: () => ({
+      userId,
+      sessionId,
+      getUserId: () => userId,
+      // token-like fields if needed by your code:
+      // token: payload.__raw ?? null,
+      // roles: payload.roles ?? [],
+    }),
+  };
+
+  return session;
+}
+
+/**
  * Minimal createClerkClient shim
  */
 export function createClerkClient(_opts?: any) {
@@ -34,11 +63,6 @@ export function createClerkClient(_opts?: any) {
     sessions: {
       verifyToken: async (token: string, opts?: any) => verifyToken(token, opts),
     },
-    /**
-     * authenticateRequest accepts a Node/Next request-like object and returns
-     * a minimal session object similar to Clerk's authenticateRequest.
-     * It looks for Authorization: Bearer <token> in headers.
-     */
     authenticateRequest: async (req: any) => {
       const authHeader =
         req?.headers?.authorization ??
@@ -52,13 +76,7 @@ export function createClerkClient(_opts?: any) {
       const payload = await verifyJwt(token);
       if (!payload) throw new Error("Unauthorized - Invalid token");
 
-      // Return a minimal session-like object. Add fields if your code expects them.
-      return {
-        sessionId: payload.jti ?? null,
-        userId: payload.sub ?? null,
-        getUserId: () => payload.sub ?? null,
-        payload,
-      };
+      return buildSessionFromPayload(payload);
     },
   };
 }
