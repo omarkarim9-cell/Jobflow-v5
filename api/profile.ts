@@ -1,41 +1,36 @@
-//profile.ts
 import { VercelRequest, VercelResponse } from "@vercel/node";
-import { verifyToken } from "@clerk/backend";
+import { createRemoteJWKSet, jwtVerify, JWTPayload } from "jose";
 import { neon } from "@neondatabase/serverless";
 
-const CLERK_SECRET = process.env.CLERK_SECRET_KEY;
+const CLERK_ISSUER = "https://clerk.kush-edu.com";
+const JWKS_URL = `${CLERK_ISSUER}/.well-known/jwks.json`;
+const jwks = createRemoteJWKSet(new URL(JWKS_URL));
+const sql = neon(process.env.DATABASE_URL!);
+
+async function verifyJwtAndGetSub(token: string): Promise<string | null> {
+  try {
+    const { payload } = await jwtVerify(token, jwks, { issuer: CLERK_ISSUER });
+    const sub = typeof payload.sub === "string" ? payload.sub : null;
+    return sub;
+  } catch (err) {
+    console.error("[JWT VERIFY] Error:", err);
+    return null;
+  }
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
-    // -----------------------------
-    // 1. Extract & verify token
-    // -----------------------------
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith("Bearer ")) {
       return res.status(401).json({ error: "Unauthorized - Missing token" });
     }
 
     const token = authHeader.split(" ")[1];
-
-    let userId: string;
-    try {
-   const { payload } = await verifyToken(token, {
-  issuer: "https://clerk.kush-edu.com",
-});
-
-const userId = payload.sub;
-
-
-
-    } catch (err) {
+    const userId = await verifyJwtAndGetSub(token);
+    if (!userId) {
       return res.status(401).json({ error: "Unauthorized - Invalid token" });
     }
 
-    const sql = neon(process.env.DATABASE_URL!);
-
-    // -----------------------------
-    // 2. GET profile
-    // -----------------------------
     if (req.method === "GET") {
       const result = await sql`
         SELECT *
@@ -45,11 +40,8 @@ const userId = payload.sub;
       return res.status(200).json(result[0] || null);
     }
 
-    // -----------------------------
-    // 3. POST create/update profile
-    // -----------------------------
     if (req.method === "POST") {
-      const profile = req.body;
+      const profile = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
 
       await sql`
         INSERT INTO user_profiles (
@@ -96,6 +88,6 @@ const userId = payload.sub;
     return res.status(405).json({ error: "Method not allowed" });
   } catch (error: any) {
     console.error("[API/PROFILE] Error:", error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: error?.message || "Internal Server Error" });
   }
 }

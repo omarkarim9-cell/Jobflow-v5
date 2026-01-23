@@ -1,45 +1,38 @@
-//jobs.ts
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { verifyToken } from "@clerk/backend";
+import { createRemoteJWKSet, jwtVerify } from "jose";
 import { neon } from "@neondatabase/serverless";
 
+const CLERK_ISSUER = "https://clerk.kush-edu.com";
+const JWKS_URL = `${CLERK_ISSUER}/.well-known/jwks.json`;
+const jwks = createRemoteJWKSet(new URL(JWKS_URL));
+
 const DB_URL = process.env.DATABASE_URL;
-const CLERK_SECRET = process.env.CLERK_SECRET_KEY;
-
 if (!DB_URL) throw new Error("Missing DATABASE_URL env var");
-if (!CLERK_SECRET) throw new Error("Missing CLERK_SECRET_KEY env var");
-
 const sql = neon(DB_URL);
+
+async function verifyJwtAndGetSub(token: string): Promise<string | null> {
+  try {
+    const { payload } = await jwtVerify(token, jwks, { issuer: CLERK_ISSUER });
+    return typeof payload.sub === "string" ? payload.sub : null;
+  } catch (err) {
+    console.error("[JWT VERIFY] Error:", err);
+    return null;
+  }
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
-    // -----------------------------
-    // 1. Extract & verify token
-    // -----------------------------
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith("Bearer ")) {
       return res.status(401).json({ error: "Unauthorized - Missing token" });
     }
 
     const token = authHeader.split(" ")[1];
-
-    let userId: string;
-    try {
-     const { payload } = await verifyToken(token, {
-  issuer: "https://clerk.kush-edu.com",
-});
-
-const userId = payload.sub;
-
-
-
-    } catch (err) {
+    const userId = await verifyJwtAndGetSub(token);
+    if (!userId) {
       return res.status(401).json({ error: "Unauthorized - Invalid token" });
     }
 
-    // -----------------------------
-    // 2. Resolve internal profile.id
-    // -----------------------------
     const profileRows = await sql`
       SELECT id
       FROM profiles
@@ -53,9 +46,6 @@ const userId = payload.sub;
 
     const profileId = profileRows[0].id as string;
 
-    // -----------------------------
-    // 3. GET jobs
-    // -----------------------------
     if (req.method === "GET") {
       const result = await sql`
         SELECT *
@@ -86,15 +76,9 @@ const userId = payload.sub;
       return res.status(200).json({ jobs });
     }
 
-    // -----------------------------
-    // 4. POST create/update job
-    // -----------------------------
     if (req.method === "POST") {
       const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body || {};
-
-      if (!body.id) {
-        return res.status(400).json({ error: "Invalid Job Payload: missing id" });
-      }
+      if (!body.id) return res.status(400).json({ error: "Invalid Job Payload: missing id" });
 
       const jobData = {
         location: body.location || "",
@@ -153,20 +137,14 @@ const userId = payload.sub;
       return res.status(200).json({ success: true, job: result[0] });
     }
 
-    // -----------------------------
-    // 5. DELETE job
-    // -----------------------------
     if (req.method === "DELETE") {
       const jobId = (req.query.id as string) || (req.body && req.body.id);
-      if (!jobId) {
-        return res.status(400).json({ error: "Missing Job ID" });
-      }
+      if (!jobId) return res.status(400).json({ error: "Missing Job ID" });
 
       await sql`
         DELETE FROM jobs
         WHERE id = ${jobId} AND user_id = ${profileId}
       `;
-
       return res.status(200).json({ success: true });
     }
 
