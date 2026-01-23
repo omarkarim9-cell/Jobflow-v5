@@ -101,7 +101,6 @@ export const fetchJobsFromDb = async (clerkToken: string): Promise<Job[]> => {
         return cached ? JSON.parse(cached) : [];
     }
 };
-
 export const saveJobToDb = async (job: Job, clerkToken: string) => {
     try {
         const sanitized = JSON.parse(JSON.stringify(job));
