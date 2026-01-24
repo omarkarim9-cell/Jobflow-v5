@@ -86,7 +86,7 @@ export const getUserProfile = async (clerkToken: string): Promise<UserProfile | 
 
 export const fetchJobsFromDb = async (clerkToken: string): Promise<Job[]> => {
     try {
-        const response = await fetch(`${window.location.origin}/api/jobs`, {
+        const response = await fetch(`${API_BASE}/jobs`, {  // Changed this line
             headers: { 'Authorization': `Bearer ${clerkToken}` }
         });
         if (response.ok) {
@@ -101,10 +101,11 @@ export const fetchJobsFromDb = async (clerkToken: string): Promise<Job[]> => {
         return cached ? JSON.parse(cached) : [];
     }
 };
+
 export const saveJobToDb = async (job: Job, clerkToken: string) => {
     try {
         const sanitized = JSON.parse(JSON.stringify(job));
-        await fetch(`${window.location.origin}/api/jobs`, {
+        await fetch(`${API_BASE}/jobs`, {  // Changed this line
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
