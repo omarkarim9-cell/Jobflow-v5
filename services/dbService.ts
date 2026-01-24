@@ -1,9 +1,8 @@
+//dbservice.ts
 import { Job, UserProfile, UserPreferences } from '../app-types';
-
 const API_BASE = '/api';
 const LOCAL_PROFILE_KEY = 'jobflow_profile_cache';
 const LOCAL_JOBS_KEY = 'jobflow_jobs_cache';
-
 const normalizePreferences = (prefs: any): UserPreferences => {
     if (!prefs) return { targetRoles: [], targetLocations: [], minSalary: '', remoteOnly: false, language: 'en' };
     return {
