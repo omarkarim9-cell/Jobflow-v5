@@ -1,4 +1,4 @@
-﻿import type { VercelRequest, VercelResponse } from "@vercel/node";
+import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { neon } from "@neondatabase/serverless";
 
@@ -33,18 +33,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(401).json({ error: "Unauthorized - Invalid token" });
     }
 
-    const profileRows = await sql`
-      SELECT id
-      FROM profiles
-      WHERE clerk_user_id = ${userId}
-      LIMIT 1
-    `;
-
-    if (!profileRows[0]) {
-      return res.status(404).json({ error: "Profile not found for user" });
-    }
-
-    const profileId = profileRows[0].id as string;
+    // Use userId directly as profileId (same as profile.ts does)
+    const profileId = userId;
 
     if (req.method === "GET") {
       const result = await sql`
@@ -154,4 +144,3 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: "Internal Server Error" });
   }
 }
-
