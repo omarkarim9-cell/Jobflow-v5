@@ -7,7 +7,6 @@ import { NotificationType } from './NotificationToast';
 import { EmailConnectModal } from './EmailConnectModal';
 import { getMessageBody, decodeEmailBody, listMessages } from '../services/gmailService';
 import { analyzeJobsWithAi } from '../services/geminiService';
-
 interface InboxScannerProps {
   onImport: (jobs: Job[]) => void;
   dirHandle?: any;
