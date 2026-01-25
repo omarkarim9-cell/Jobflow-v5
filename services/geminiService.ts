@@ -168,3 +168,27 @@ export const getSmartApplicationUrl = (url: string): string => {
         return u.toString();
     } catch (e) { return url; }
 };
+// Backwards-compatible wrapper for old InboxScanner
+// Restores the original function name expected by the scanner
+export const extractJobsFromEmailHtml = async (
+    html: string,
+    targetRoles: string[] = []
+) => {
+    try {
+        // We don't need resume or token for email extraction
+        const jobs = await analyzeJobsWithAi(html, "", "");
+
+        // Optional: filter by target roles if provided
+        if (targetRoles.length > 0) {
+            const lower = targetRoles.map(r => r.toLowerCase());
+            return jobs.filter(j =>
+                lower.some(r => j.title?.toLowerCase().includes(r))
+            );
+        }
+
+        return jobs;
+    } catch (err) {
+        console.error("[extractJobsFromEmailHtml] Error:", err);
+        return [];
+    }
+};
