@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Job, JobStatus, EmailAccount, UserPreferences, isSubscriptionValid, UserProfile } from '../types';
-import { Mail, Search, Trash2, AlertCircle, Settings, RefreshCw, Calendar, Link, X } from 'lucide-react';
-import { extractJobsFromEmailHtml } from '../services/geminiService';
+import { Job, JobStatus, EmailAccount, UserPreferences } from '../app-types';
+import { Mail, Search, X, Loader2, StopCircle, BrainCircuit, Zap, Clock, ShieldCheck } from 'lucide-react';
+import { localExtractJobs } from '../services/localAiService';
 import { listMessages, getMessageBody, decodeEmailBody } from '../services/gmailService';
 import { NotificationType } from './NotificationToast';
 import { EmailConnectModal } from './EmailConnectModal';
-
+import { getMessageBody, decodeEmailBody, listMessages } from '../services/gmailService';
+import { analyzeJobsWithAi } from '../services/geminiService';
 interface InboxScannerProps {
   onImport: (jobs: Job[]) => void;
   dirHandle?: any;
