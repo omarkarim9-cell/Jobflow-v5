@@ -136,11 +136,53 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, userProfile, onUpdate
   // -----------------------------
   // UNIFIED "GENERATE ALL ASSETS"
   // -----------------------------
-  const handleGenerateDocuments = async () => {
-    if (!userProfile.resumeContent || userProfile.resumeContent.length < 50) {
-      notify("Please upload your resume in Settings first.", "error");
-      return;
-    }
+ const handleGenerateDocuments = async () => {
+  if (!userProfile.resumeContent || userProfile.resumeContent.length < 50) {
+    notify("Please upload your resume in Settings first.", "error");
+    return;
+  }
+
+  setIsGenerating(true);
+  notify(`Generating application materials for ${job.company}...`, "success");
+
+  try {
+    const response = await fetch("/api/generate-assets", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jobTitle: job.title,
+        company: job.company,
+        description: job.description,
+        resume: userProfile.resumeContent,
+        name: userProfile.fullName,
+        email: userProfile.email,
+      }),
+    });
+
+    if (!response.ok) throw new Error("Generation failed");
+
+    const { resume, letter } = await response.json();
+    const qs = await fetchInterviewQuestions(job, userProfile);
+
+    const updatedJob: Job = {
+      ...job,
+      customizedResume: resume,
+      coverLetter: letter,
+      interviewQuestions: qs,
+    };
+
+    await onUpdateJob(updatedJob);
+    setQuestions(qs);
+
+    notify("All AI assets are ready!", "success");
+  } catch (e) {
+    console.error("Generation failed:", e);
+    notify("Generation failed. Check API key.", "error");
+  } finally {
+    setIsGenerating(false);
+  }
+};
+
 const handleDownloadAllTxt = () => {
   try {
     // Resume
@@ -379,49 +421,7 @@ const handleDownloadZipPdf = async () => {
   }
 };
 
-    setIsGenerating(true);
-    notify(`Generating application materials for ${job.company}...`, 'success');
-
-    try {
-      // 1. Resume + Cover Letter (via API)
-      const response = await fetch('/api/generate-assets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jobTitle: job.title,
-          company: job.company,
-          description: job.description,
-          resume: userProfile.resumeContent,
-          name: userProfile.fullName,
-          email: userProfile.email
-        })
-      });
-
-      if (!response.ok) throw new Error('Generation failed');
-
-      const { resume, letter } = await response.json();
-
-      // 2. Interview Questions (10)
-      const qs = await fetchInterviewQuestions(job, userProfile);
-
-      const updatedJob: Job = { 
-        ...job, 
-        customizedResume: resume, 
-        coverLetter: letter,
-        interviewQuestions: qs
-      };
-
-      await onUpdateJob(updatedJob);
-      setQuestions(qs);
-
-      notify("All AI assets are ready!", "success");
-    } catch (e) {
-      console.error("Generation failed:", e);
-      notify("Generation failed. Check API key.", "error");
-    } finally {
-      setIsGenerating(false);
-    }
-  };
+   
   return (
     <div className="flex flex-col h-full bg-slate-50 overflow-y-auto">
       <div className="p-8 max-w-5xl mx-auto w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
