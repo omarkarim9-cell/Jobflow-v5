@@ -35,6 +35,7 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, userProfile, onUpdate
   const [questions, setQuestions] = useState<string[]>([]);
 
   const audioContextRef = useRef<AudioContext | null>(null);
+  const [showDownloadMenuBottom, setShowDownloadMenuBottom] = useState(false); // ← add this
 
   const notify = (msg: string, type: 'success' | 'error') => {
       if (showNotification) showNotification(msg, type);
@@ -140,6 +141,243 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, userProfile, onUpdate
       notify("Please upload your resume in Settings first.", "error");
       return;
     }
+const handleDownloadAllTxt = () => {
+  try {
+    // Resume
+    if (job.customizedResume) {
+      const blob = new Blob([job.customizedResume], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${job.company}_Resume.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Cover Letter
+    if (job.coverLetter) {
+      const blob = new Blob([job.coverLetter], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${job.company}_CoverLetter.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Interview Questions
+    if (job.interviewQuestions?.length) {
+      const text = job.interviewQuestions.join("\n\n");
+      const blob = new Blob([text], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${job.company}_InterviewQuestions.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    showNotification("TXT files downloaded successfully!", "success");
+  } catch (err) {
+    console.error(err);
+    showNotification("Failed to download TXT files.", "error");
+  }
+};
+const handleDownloadAllPdf = () => {
+  try {
+    // Resume
+    if (job.customizedResume) {
+      const doc = new jsPDF();
+      doc.setFont("Helvetica", "normal");
+      doc.setFontSize(12);
+      doc.text(job.customizedResume, 10, 10);
+      doc.save(`${job.company}_Resume.pdf`);
+    }
+
+    // Cover Letter
+    if (job.coverLetter) {
+      const doc = new jsPDF();
+      doc.setFont("Helvetica", "normal");
+      doc.setFontSize(12);
+      doc.text(job.coverLetter, 10, 10);
+      doc.save(`${job.company}_CoverLetter.pdf`);
+    }
+
+    // Interview Questions
+    if (job.interviewQuestions?.length) {
+      const doc = new jsPDF();
+      doc.setFont("Helvetica", "normal");
+      doc.setFontSize(12);
+      const text = job.interviewQuestions.join("\n\n");
+      doc.text(text, 10, 10);
+      doc.save(`${job.company}_InterviewQuestions.pdf`);
+    }
+
+    showNotification("PDF files downloaded successfully!", "success");
+  } catch (err) {
+    console.error(err);
+    showNotification("Failed to download PDF files.", "error");
+  }
+};
+const handleDownloadAllDoc = () => {
+  try {
+    // Resume
+    if (job.customizedResume) {
+      const blob = new Blob([job.customizedResume], { type: "application/msword" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${job.company}_Resume.doc`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Cover Letter
+    if (job.coverLetter) {
+      const blob = new Blob([job.coverLetter], { type: "application/msword" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${job.company}_CoverLetter.doc`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Interview Questions
+    if (job.interviewQuestions?.length) {
+      const text = job.interviewQuestions.join("\n\n");
+      const blob = new Blob([text], { type: "application/msword" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${job.company}_InterviewQuestions.doc`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    showNotification("DOC files downloaded successfully!", "success");
+  } catch (err) {
+    console.error(err);
+    showNotification("Failed to download DOC files.", "error");
+  }
+};
+const handleDownloadZipTxt = async () => {
+  try {
+    const zip = new JSZip();
+
+    // Resume
+    if (job.customizedResume) {
+      zip.file(`${job.company}_Resume.txt`, job.customizedResume);
+    }
+
+    // Cover Letter
+    if (job.coverLetter) {
+      zip.file(`${job.company}_CoverLetter.txt`, job.coverLetter);
+    }
+
+    // Interview Questions
+    if (job.interviewQuestions?.length) {
+      const text = job.interviewQuestions.join("\n\n");
+      zip.file(`${job.company}_InterviewQuestions.txt`, text);
+    }
+
+    const blob = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${job.company}_TXT_Files.zip`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    showNotification("TXT ZIP downloaded successfully!", "success");
+  } catch (err) {
+    console.error(err);
+    showNotification("Failed to download TXT ZIP.", "error");
+  }
+};
+const handleDownloadZipDoc = async () => {
+  try {
+    const zip = new JSZip();
+
+    // Resume
+    if (job.customizedResume) {
+      zip.file(`${job.company}_Resume.doc`, job.customizedResume);
+    }
+
+    // Cover Letter
+    if (job.coverLetter) {
+      zip.file(`${job.company}_CoverLetter.doc`, job.coverLetter);
+    }
+
+    // Interview Questions
+    if (job.interviewQuestions?.length) {
+      const text = job.interviewQuestions.join("\n\n");
+      zip.file(`${job.company}_InterviewQuestions.doc`, text);
+    }
+
+    const blob = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${job.company}_DOC_Files.zip`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    showNotification("DOC ZIP downloaded successfully!", "success");
+  } catch (err) {
+    console.error(err);
+    showNotification("Failed to download DOC ZIP.", "error");
+  }
+};
+const handleDownloadZipPdf = async () => {
+  try {
+    const zip = new JSZip();
+
+    // Resume PDF
+    if (job.customizedResume) {
+      const doc = new jsPDF();
+      doc.setFont("Helvetica", "normal");
+      doc.setFontSize(12);
+      doc.text(job.customizedResume, 10, 10);
+      const pdfBlob = doc.output("blob");
+      zip.file(`${job.company}_Resume.pdf`, pdfBlob);
+    }
+
+    // Cover Letter PDF
+    if (job.coverLetter) {
+      const doc = new jsPDF();
+      doc.setFont("Helvetica", "normal");
+      doc.setFontSize(12);
+      doc.text(job.coverLetter, 10, 10);
+      const pdfBlob = doc.output("blob");
+      zip.file(`${job.company}_CoverLetter.pdf`, pdfBlob);
+    }
+
+    // Interview Questions PDF
+    if (job.interviewQuestions?.length) {
+      const doc = new jsPDF();
+      doc.setFont("Helvetica", "normal");
+      doc.setFontSize(12);
+      const text = job.interviewQuestions.join("\n\n");
+      doc.text(text, 10, 10);
+      const pdfBlob = doc.output("blob");
+      zip.file(`${job.company}_InterviewQuestions.pdf`, pdfBlob);
+    }
+
+    const blob = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${job.company}_PDF_Files.zip`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    showNotification("PDF ZIP downloaded successfully!", "success");
+  } catch (err) {
+    console.error(err);
+    showNotification("Failed to download PDF ZIP.", "error");
+  }
+};
 
     setIsGenerating(true);
     notify(`Generating application materials for ${job.company}...`, 'success');
@@ -366,12 +604,49 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, userProfile, onUpdate
                             <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
                                 <StickyNote className="w-5 h-5 text-purple-600" /> Cover Letter
                             </h3>
-                            <button 
-                                onClick={() => handleDownload(job.coverLetter!, `${job.company}_Letter.txt`)}
-                                className="p-2 text-slate-400 hover:text-purple-600"
-                            >
-                                <Download className="w-4 h-4" />
-                            </button>
+                           <div className="relative">
+						  <button
+							onClick={() => setShowDownloadMenu(prev => !prev)}
+							className="p-2 text-slate-400 hover:text-indigo-600"
+						  >
+							<Download className="w-4 h-4" />
+						  </button>
+
+						  {showDownloadMenu && (
+							<div className="absolute right-0 mt-2 w-40 bg-white border border-slate-200 rounded-xl shadow-lg z-20">
+							  <button
+								onClick={() => {
+								  setShowDownloadMenu(false);
+								  handleDownloadPdf(job.customizedResume!, `${job.company}_Resume.pdf`);
+								}}
+								className="w-full text-left px-4 py-2 text-xs hover:bg-slate-50"
+							  >
+								Download PDF
+							  </button>
+
+							  <button
+								onClick={() => {
+								  setShowDownloadMenu(false);
+								  handleDownloadDocx(job.customizedResume!, `${job.company}_Resume.docx`);
+								}}
+								className="w-full text-left px-4 py-2 text-xs hover:bg-slate-50"
+							  >
+								Download DOCX
+							  </button>
+
+							  <button
+								onClick={() => {
+								  setShowDownloadMenu(false);
+								  handleDownloadZip(job, `${job.company}_Assets.zip`);
+								}}
+								className="w-full text-left px-4 py-2 text-xs hover:bg-slate-50"
+							  >
+								Download ZIP
+							  </button>
+							</div>
+						  )}
+						</div>
+
                         </div>
                         <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 max-h-96 overflow-y-auto font-mono text-xs text-slate-600 leading-relaxed whitespace-pre-wrap">
                             {job.coverLetter}
@@ -381,17 +656,100 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, userProfile, onUpdate
             </div>
         )}
 
-        {/* Description */}
-        <div className="bg-white p-12 rounded-[2.5rem] border border-slate-200 shadow-sm">
-            <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-10 flex items-center gap-3">
-                <Sparkles className="w-5 h-5 text-indigo-600" /> Job Description
-            </h3>
-            <div className="text-slate-600 text-base leading-loose whitespace-pre-wrap font-medium">
-                {job.description || "No description available."}
-            </div>
-        </div>
-
-      </div>
+      {/* Description */}
+<div className="bg-white p-12 rounded-[2.5rem] border border-slate-200 shadow-sm">
+    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-10 flex items-center gap-3">
+        <Sparkles className="w-5 h-5 text-indigo-600" /> Job Description
+    </h3>
+    <div className="text-slate-600 text-base leading-loose whitespace-pre-wrap font-medium">
+        {job.description || "No description available."}
     </div>
-  );
+</div>
+
+</div>   {/* ← closes inner content container */}
+
+
+{/* Bottom Download Menu */}
+<div className="flex justify-center mt-12 relative">
+  <button
+    onClick={() => setShowDownloadMenuBottom(prev => !prev)}
+    className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-indigo-700 shadow-md"
+  >
+    Download Options
+  </button>
+
+  {showDownloadMenuBottom && (
+    <div className="absolute bottom-[-180px] bg-white border border-slate-200 rounded-xl shadow-xl w-56 z-30">
+	<button
+	  onClick={() => {
+		setShowDownloadMenuBottom(false);
+		handleDownloadAllPdf();
+	  }}
+	  className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50"
+	>
+	  Download (PDF)
+	</button>
+
+     <button
+	  onClick={() => {
+		setShowDownloadMenuBottom(false);
+		handleDownloadAllDoc();
+	  }}
+	  className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50"
+	>
+	  Download (DOC)
+	</button>
+
+      <button
+		  onClick={() => {
+			setShowDownloadMenuBottom(false);
+			handleDownloadAllTxt();
+		  }}
+		  className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50"
+		>
+		  Download (TXT)
+		</button>
+
+
+      <div className="border-t border-slate-200 my-1"></div>
+
+      <button
+		  onClick={() => {
+			setShowDownloadMenuBottom(false);
+			handleDownloadZipPdf();
+		  }}
+		  className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50"
+		>
+		  Download ZIP (PDF)
+		</button>
+
+     <button
+	  onClick={() => {
+		setShowDownloadMenuBottom(false);
+		handleDownloadZipDoc();
+	  }}
+	  className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50"
+	>
+	  Download ZIP (DOC)
+	</button>
+
+     <button
+	  onClick={() => {
+		setShowDownloadMenuBottom(false);
+		handleDownloadZipTxt();
+	  }}
+	  className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50"
+	>
+	  Download ZIP (TXT)
+	</button>
+
+    </div>
+  )}
+</div>
+
+
+</div>   {/* ← closes outer page wrapper */}
+
+);
 };
+
