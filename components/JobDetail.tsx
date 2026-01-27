@@ -17,7 +17,7 @@ import {
     ListChecks
 } from 'lucide-react';
 
-import { fetchAudioBriefing, fetchInterviewQuestions } from '../services/geminiService';
+import { fetchInterviewQuestions } from '../services/geminiService';
 
 interface JobDetailProps {
   job: Job;
@@ -78,7 +78,9 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, userProfile, onUpdate
     setIsAudioLoading(true);
 
     try {
-      const base64 = await fetchAudioBriefing(job, userProfile);
+      //const base64 = await fetchAudioBriefing(job, userProfile);
+		notify("Audio briefing is coming soon.", "info");
+		return;
 
       if (!audioContextRef.current) {
         audioContextRef.current = new (window.AudioContext ||
