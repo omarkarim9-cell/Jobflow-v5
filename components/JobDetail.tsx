@@ -613,61 +613,59 @@ const handleDownloadZipPdf = async () => {
 						  </button>
 
 						  {showDownloadMenu && (
-							<div className="absolute right-0 mt-2 w-40 bg-white border border-slate-200 rounded-xl shadow-lg z-20">
-							  <button
-								onClick={() => {
-								  setShowDownloadMenu(false);
-								  handleDownloadPdf(job.customizedResume!, `${job.company}_Resume.pdf`);
-								}}
-								className="w-full text-left px-4 py-2 text-xs hover:bg-slate-50"
-							  >
-								Download PDF
-							  </button>
+  <div className="absolute right-0 mt-2 w-40 bg-white border border-slate-200 rounded-xl shadow-lg z-20">
+    <button
+      onClick={() => {
+        setShowDownloadMenu(false);
+        handleDownloadPdf(job.customizedResume!, `${job.company}_Resume.pdf`);
+      }}
+      className="w-full text-left px-4 py-2 text-xs hover:bg-slate-50"
+    >
+      Download PDF
+    </button>
 
-							  <button
-								onClick={() => {
-								  setShowDownloadMenu(false);
-								  handleDownloadDocx(job.customizedResume!, `${job.company}_Resume.docx`);
-								}}
-								className="w-full text-left px-4 py-2 text-xs hover:bg-slate-50"
-							  >
-								Download DOCX
-							  </button>
+    <button
+      onClick={() => {
+        setShowDownloadMenu(false);
+        handleDownloadDocx(job.customizedResume!, `${job.company}_Resume.docx`);
+      }}
+      className="w-full text-left px-4 py-2 text-xs hover:bg-slate-50"
+    >
+      Download DOCX
+    </button>
 
-							  <button
-								onClick={() => {
-								  setShowDownloadMenu(false);
-								  handleDownloadZip(job, `${job.company}_Assets.zip`);
-								}}
-								className="w-full text-left px-4 py-2 text-xs hover:bg-slate-50"
-							  >
-								Download ZIP
-							  </button>
-							</div>
-						  )}
-						</div>
+    <button
+      onClick={() => {
+        setShowDownloadMenu(false);
+        handleDownloadZip(job, `${job.company}_Assets.zip`);
+      }}
+      className="w-full text-left px-4 py-2 text-xs hover:bg-slate-50"
+    >
+      Download ZIP
+    </button>
+  </div>
+)}  {/* ← closed showDownloadMenu block */}
 
-                        </div>
-                        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 max-h-96 overflow-y-auto font-mono text-xs text-slate-600 leading-relaxed whitespace-pre-wrap">
-                            {job.coverLetter}
-                        </div>
-                    </div>
-                )}
-            </div>
-        )}
+</div> {/* ← closes the container that wraps the above section */}
 
-      {/* Description */}
+<div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 max-h-96 overflow-y-auto font-mono text-xs text-slate-600 leading-relaxed whitespace-pre-wrap">
+  {job.coverLetter}
+</div>
+</div>
+)}  {/* ← closes the conditional that started earlier (keep as-is if it matches your opening) */}
+</div>
+
+{/* Description */}
 <div className="bg-white p-12 rounded-[2.5rem] border border-slate-200 shadow-sm">
-    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-10 flex items-center gap-3">
-        <Sparkles className="w-5 h-5 text-indigo-600" /> Job Description
-    </h3>
-    <div className="text-slate-600 text-base leading-loose whitespace-pre-wrap font-medium">
-        {job.description || "No description available."}
-    </div>
+  <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-10 flex items-center gap-3">
+    <Sparkles className="w-5 h-5 text-indigo-600" /> Job Description
+  </h3>
+  <div className="text-slate-600 text-base leading-loose whitespace-pre-wrap font-medium">
+    {job.description || "No description available."}
+  </div>
 </div>
 
 </div>   {/* ← closes inner content container */}
-
 
 {/* Bottom Download Menu */}
 <div className="flex justify-center mt-12 relative">
@@ -680,74 +678,69 @@ const handleDownloadZipPdf = async () => {
 
   {showDownloadMenuBottom && (
     <div className="absolute bottom-[-180px] bg-white border border-slate-200 rounded-xl shadow-xl w-56 z-30">
-	<button
-	  onClick={() => {
-		setShowDownloadMenuBottom(false);
-		handleDownloadAllPdf();
-	  }}
-	  className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50"
-	>
-	  Download (PDF)
-	</button>
-
-     <button
-	  onClick={() => {
-		setShowDownloadMenuBottom(false);
-		handleDownloadAllDoc();
-	  }}
-	  className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50"
-	>
-	  Download (DOC)
-	</button>
+      <button
+        onClick={() => {
+          setShowDownloadMenuBottom(false);
+          handleDownloadAllPdf();
+        }}
+        className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50"
+      >
+        Download (PDF)
+      </button>
 
       <button
-		  onClick={() => {
-			setShowDownloadMenuBottom(false);
-			handleDownloadAllTxt();
-		  }}
-		  className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50"
-		>
-		  Download (TXT)
-		</button>
+        onClick={() => {
+          setShowDownloadMenuBottom(false);
+          handleDownloadAllDoc();
+        }}
+        className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50"
+      >
+        Download (DOC)
+      </button>
 
+      <button
+        onClick={() => {
+          setShowDownloadMenuBottom(false);
+          handleDownloadAllTxt();
+        }}
+        className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50"
+      >
+        Download (TXT)
+      </button>
 
       <div className="border-t border-slate-200 my-1"></div>
 
       <button
-		  onClick={() => {
-			setShowDownloadMenuBottom(false);
-			handleDownloadZipPdf();
-		  }}
-		  className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50"
-		>
-		  Download ZIP (PDF)
-		</button>
+        onClick={() => {
+          setShowDownloadMenuBottom(false);
+          handleDownloadZipPdf();
+        }}
+        className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50"
+      >
+        Download ZIP (PDF)
+      </button>
 
-     <button
-	  onClick={() => {
-		setShowDownloadMenuBottom(false);
-		handleDownloadZipDoc();
-	  }}
-	  className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50"
-	>
-	  Download ZIP (DOC)
-	</button>
+      <button
+        onClick={() => {
+          setShowDownloadMenuBottom(false);
+          handleDownloadZipDoc();
+        }}
+        className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50"
+      >
+        Download ZIP (DOC)
+      </button>
 
-     <button
-	  onClick={() => {
-		setShowDownloadMenuBottom(false);
-		handleDownloadZipTxt();
-	  }}
-	  className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50"
-	>
-	  Download ZIP (TXT)
-	</button>
-
+      <button
+        onClick={() => {
+          setShowDownloadMenuBottom(false);
+          handleDownloadZipTxt();
+        }}
+        className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50"
+      >
+        Download ZIP (TXT)
+      </button>
     </div>
   )}
-</div>
-
-
 </div>   {/* ← closes outer page wrapper */}
 
 );
