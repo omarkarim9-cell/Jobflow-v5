@@ -182,7 +182,7 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, userProfile, onUpdate
     setIsGenerating(false);
   }
 };
-
+ 
 const handleDownloadAllTxt = () => {
   try {
     // Resume
