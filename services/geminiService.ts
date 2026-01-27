@@ -192,3 +192,6 @@ export const extractJobsFromEmailHtml = async (
         return [];
     }
 };
+// Backwards compatibility for JobDetail.tsx
+export const fetchAudioBriefing = generateAudioBriefing;
+export const fetchInterviewQuestions = generateInterviewQuestions;
