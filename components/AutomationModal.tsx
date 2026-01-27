@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Job, UserProfile } from '../app-types';
 // Fixed non-existent 'Browser' and unused 'ArrowRight' imports from lucide-react
+
 import { 
     Loader2, 
     Terminal, 
@@ -20,7 +21,7 @@ interface AutomationModalProps {
   onComplete: () => void;
 }
 
-export const AutomationModal: React.FC<AutomationModalProps> = ({ isOpen, onClose, job, userProfile, onComplete }) => {
+export const AutomationModal: React.FC<AutomationModalProps> = ({ isOpen, onClose, job, userProfile, onComplete, onAuthError }) => {
   const [logs, setLogs] = useState<string[]>([]);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState<'running' | 'success' | 'fallback' | 'error'>('running');
@@ -43,36 +44,80 @@ export const AutomationModal: React.FC<AutomationModalProps> = ({ isOpen, onClos
     setProgress(0);
     setStatus('running');
 
-    const runSimulation = async () => {
-        const steps = [
-            { msg: "AI Agent initialized. Initializing secure Chromium instance...", delay: 800, p: 10 },
-            { msg: "Loading master resume from cloud storage...", delay: 600, p: 20 },
-            { msg: `Establishing connection to ${job.company} portal...`, delay: 1200, p: 35 },
-            { msg: "Bypassing bot detection signatures...", delay: 1500, p: 50 },
-            { msg: "Analyzing form structure and ID fields...", delay: 900, p: 65 },
-            { msg: "Injecting tailored bullet points into experience fields...", delay: 1100, p: 80 },
-            { msg: "Uploading generated PDF asset...", delay: 1300, p: 90 },
-            { msg: "Ready for final submission.", delay: 500, p: 100 }
-        ];
+   const runSimulation = async () => {
+  const steps = [
+    { msg: "AI Agent initialized. Initializing secure Chromium instance...", delay: 800, p: 10 },
+    { msg: "Loading master resume from cloud storage...", delay: 600, p: 20 },
+    { msg: `Establishing connection to ${job.company} portal...`, delay: 1200, p: 35 },
+    { msg: "Bypassing bot detection signatures...", delay: 1500, p: 50 },
+    { msg: "Analyzing form structure and ID fields...", delay: 900, p: 65 },
+    { msg: "Injecting tailored bullet points into experience fields...", delay: 1100, p: 80 },
+    { msg: "Uploading generated PDF asset...", delay: 1300, p: 90 },
+    { msg: "Ready for final submission.", delay: 500, p: 100 }
+  ];
 
-        for (const step of steps) {
-            addLog(step.msg);
-            setProgress(step.p);
-            await new Promise(r => setTimeout(r, step.delay));
-        }
+  for (const step of steps) {
+    addLog(step.msg);
+    setProgress(step.p);
+    await new Promise(r => setTimeout(r, step.delay));
+  }
 
-        // Logic check: simulate manual fallback for certain domains
-        const isComplex = job.applicationUrl?.includes('linkedin') || job.applicationUrl?.includes('indeed');
-        if (isComplex) {
-            setStatus('fallback');
-            addLog("CRITICAL: Advanced anti-bot measures detected (Cloudflare).");
-            addLog("Switching to Manual Fallback mode for account safety.");
-        } else {
-            setStatus('success');
-            addLog("Application successfully submitted and tracked.");
-            onComplete();
-        }
-    };
+  // Logic check: simulate manual fallback for certain domains
+  const isComplex = job.applicationUrl?.includes('linkedin') || job.applicationUrl?.includes('indeed');
+
+  try {
+    if (isComplex) {
+      setStatus('fallback');
+      addLog("CRITICAL: Advanced anti-bot measures detected (Cloudflare).");
+      addLog("Switching to Manual Fallback mode for account safety.");
+    } else {
+     // === REAL AUTO-APPLY CALL (server-backed) ===
+try {
+  addLog('Submitting application via server auto-apply...');
+  const res = await fetch('/api/auto-apply', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ job, userProfile }),
+  });
+
+  // If server indicates Gmail auth problem, surface it so caller can stop auto-apply
+  if (res.status === 401) {
+    const body = await res.text().catch(() => '');
+    const err: any = new Error(`Auto-apply Gmail 401: ${body}`);
+    err.status = 401;
+    throw err;
+  }
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Auto-apply failed ${res.status}: ${body}`);
+  }
+
+  // Success
+  setStatus('success');
+  addLog('Application successfully submitted and tracked.');
+  onComplete();
+} catch (err: any) {
+  const is401 = err?.status === 401 || (typeof err?.message === 'string' && err.message.includes('401'));
+  addLog(`ERROR: ${err?.message || 'Unknown error'}`);
+  setStatus('error');
+  if (is401 && onAuthError) {
+    addLog('ERROR: Gmail authentication failed (401). Pausing Auto Apply.');
+    onAuthError();
+  }
+}
+
+    }
+  } catch (err: any) {
+    const is401 = err?.status === 401 || (typeof err?.message === 'string' && err.message.includes('401'));
+    addLog(`ERROR: ${err?.message || 'Unknown error'}`);
+    setStatus('error');
+    if (is401 && onAuthError) {
+      addLog('ERROR: Gmail authentication failed (401). Pausing Auto Apply.');
+      onAuthError();
+    }
+  }
+};
 
     runSimulation();
   }, [isOpen, job]);

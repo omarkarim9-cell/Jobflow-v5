@@ -1,4 +1,4 @@
-﻿import { VercelRequest, VercelResponse } from "@vercel/node";
+import { VercelRequest, VercelResponse } from "@vercel/node";
 import { createRemoteJWKSet, jwtVerify, JWTPayload } from "jose";
 import { neon } from "@neondatabase/serverless";
 
@@ -91,4 +91,3 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: error?.message || "Internal Server Error" });
   }
 }
-

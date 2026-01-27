@@ -97,6 +97,12 @@ export const JobCard: React.FC<JobCardProps> = memo(({ job, onClick, isSelected,
              <p className="text-xs text-slate-500 font-medium flex items-center mt-1 truncate">
                <Building2 className="w-3 h-3 me-1.5 shrink-0" /> {job.company}
              </p>
+			 {job.description && (
+			  <p className="text-xs text-slate-600 mt-1 line-clamp-2">
+				{job.description}
+			  </p>
+			)}
+
            </div>
         </div>
         <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg border whitespace-nowrap shrink-0 ${getStatusColor(job.status)}`}>
@@ -160,13 +166,17 @@ export const JobCard: React.FC<JobCardProps> = memo(({ job, onClick, isSelected,
                   >
                     Details
                   </button>
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); onAutoApply(e, job); }}
-                    className="text-[10px] font-black uppercase tracking-wider bg-indigo-600 text-white hover:bg-indigo-700 px-4 py-2 rounded-xl border border-indigo-600 flex items-center transition-all shadow-lg shadow-indigo-100"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 me-2" />
-                    Apply Auto
-                  </button>
+                 {/* Auto-apply disabled for launch */}
+					<button
+					  className="text-[10px] font-black uppercase tracking-wider bg-gray-300 text-gray-700 px-4 py-2 rounded-xl border border-gray-300 flex items-center transition-all shadow-sm"
+					  disabled
+					  title="Auto-apply is coming soon"
+					  aria-disabled="true"
+					>
+					  <Sparkles className="w-3.5 h-3.5 me-2" />
+					  Auto‑apply (Coming soon)
+					</button>
+
                 </div>
             )}
          </div>

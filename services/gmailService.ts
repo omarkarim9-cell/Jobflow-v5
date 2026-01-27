@@ -47,7 +47,7 @@ const fetchWithTimeout = async (url: string, options: RequestInit = {}, timeout 
 
 export const fetchGmailProfile = async (accessToken: string) => {
   const cleanToken = sanitizeToken(accessToken);
-  
+
   const response = await fetchWithTimeout('https://gmail.googleapis.com/gmail/v1/users/me/profile', {
     headers: {
       Authorization: `Bearer ${cleanToken}`,
@@ -55,43 +55,51 @@ export const fetchGmailProfile = async (accessToken: string) => {
     }
   });
 
-  if (!response.ok) {
-    throw new Error('Failed to fetch profile');
+  // Surface 401 explicitly so callers can stop auto-apply and prompt reconnect
+  if (response.status === 401) {
+    const body = await response.text().catch(() => '');
+    const err: any = new Error(`Gmail API 401: ${body}`);
+    err.status = 401;
+    throw err;
   }
 
-  return await response.json();
+  if (!response.ok) {
+    const body = await response.text().catch(() => '');
+    throw new Error(`Gmail profile error ${response.status}: ${body}`);
+  }
+
+  return response.json();
 };
+
 
 export const listMessages = async (accessToken: string, limit: number = 50, query: string = 'subject:(job OR jobs OR vacancy OR career OR hiring OR opportunity)') => {
   const cleanToken = sanitizeToken(accessToken);
   const encodedQuery = encodeURIComponent(query);
-  
-  // Add timestamp to prevent browser caching of the search query
+
   const response = await fetchWithTimeout(`https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${limit}&q=${encodedQuery}&_t=${Date.now()}`, {
     headers: {
       Authorization: `Bearer ${cleanToken}`,
       Accept: 'application/json',
     },
-    cache: 'no-store', // Critical: Force fresh fetch
+    cache: 'no-store',
   });
-  
-  if (!response.ok) {
-    const errorJson = await response.json().catch(() => ({}));
-    console.error(`Gmail API Error (${response.status}):`, JSON.stringify(errorJson, null, 2));
-    
-    if (response.status === 401 || (errorJson.error && errorJson.error.code === 401)) {
-        throw new Error('TOKEN_EXPIRED');
-    } else if (response.status === 403) {
-        throw new Error('Insufficient permissions. Ensure you selected "https://www.googleapis.com/auth/gmail.readonly" in Playground.');
-    }
-    
-    const msg = errorJson.error?.message || response.statusText;
-    throw new Error(`Gmail API Error: ${response.status} ${msg}`);
+
+  // Surface 401 explicitly so callers can stop auto-apply and prompt reconnect
+  if (response.status === 401) {
+    const body = await response.text().catch(() => '');
+    const err: any = new Error(`Gmail API 401: ${body}`);
+    err.status = 401;
+    throw err;
   }
-  
-  const data = await response.json();
-  return data.messages || [];
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => '');
+    throw new Error(`Gmail list messages error ${response.status}: ${body}`);
+  }
+
+  return response.json();
 };
+
 
 export const getMessageBody = async (accessToken: string, messageId: string) => {
   const cleanToken = sanitizeToken(accessToken);
@@ -101,17 +109,23 @@ export const getMessageBody = async (accessToken: string, messageId: string) => 
       Authorization: `Bearer ${cleanToken}`,
       Accept: 'application/json',
     },
-    cache: 'force-cache', // We can cache specific message bodies to save quota
+    cache: 'force-cache',
   });
-  
-  if (!response.ok) {
-    if (response.status === 401) throw new Error('TOKEN_EXPIRED');
-    const errText = await response.text().catch(() => 'No error details');
-    console.error(`Failed to fetch message ${messageId}: ${response.status} ${response.statusText}`, errText);
-    throw new Error('Failed to get message body');
+
+  // Surface 401 explicitly so callers can stop auto-apply and prompt reconnect
+  if (response.status === 401) {
+    const body = await response.text().catch(() => '');
+    const err: any = new Error(`Gmail API 401: ${body}`);
+    err.status = 401;
+    throw err;
   }
-  
-  return await response.json();
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => '');
+    throw new Error(`Gmail get message error ${response.status}: ${body}`);
+  }
+
+  return response.json();
 };
 
 export const decodeEmailBody = (messageData: any): string => {

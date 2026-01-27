@@ -53,8 +53,17 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
   // Clerk hooks
   const { user, isLoaded, isSignedIn } = useUser();
   const { getToken, signOut } = useAuth();
+  const handleToggleCheck = useCallback((jobId: string) => {
+	  setCheckedJobIds(prev => {
+		const updated = new Set(prev);
+		if (updated.has(jobId)) updated.delete(jobId);
+		else updated.add(jobId);
+		return updated;
+	  });
+	}, []);
 
   // State hooks (all declared before any effect or conditional return)
+  const [checkedJobIds, setCheckedJobIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
@@ -66,6 +75,13 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
   const [sessionAccount, setSessionAccount] = useState<EmailAccount | null>(null);
   const [notification, setNotification] = useState<{ message: string; type: NotificationType } | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [gmailAuthFailed, setGmailAuthFailed] = useState(false);
+  const notifyGmailAuthFailed = () => {
+	  setNotification({
+		message: 'Gmail session expired. Auto Apply paused — please reconnect your Gmail account.',
+		type: 'error',
+	  });
+	};
 
   // Refs and derived flags
   const isSyncLocked = useRef(false);
@@ -196,30 +212,48 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
         // Try to load existing profile
         let profile = await getUserProfile(token);
 
-        // If no profile, create default
-        if (!profile) {
-          profile = {
-            id: user.id,
-            fullName: user.fullName || '',
-            email: user.primaryEmailAddress?.emailAddress || '',
-            phone: '',
-            resumeContent: '',
-            resumeFileName: '',
-            preferences: {
-              targetRoles: [],
-              targetLocations: [],
-              minSalary: '',
-              remoteOnly: false,
-              language: 'en',
-            },
-            connectedAccounts: [],
-            plan: 'pro',
-            onboardedAt: new Date().toISOString(),
-          };
-          await saveUserProfile(profile, token);
-        }
+		// If no profile exists, create a default one
+		if (!profile) {
+		  profile = {
+			id: user!.id,
+			fullName:
+			  user!.fullName ||
+			  `${user!.firstName || ""} ${user!.lastName || ""}`.trim(),
+			email: user!.primaryEmailAddress?.emailAddress || "",
+			phone: "",
+			resumeContent: "",
+			resumeFileName: "",
+			preferences: {
+			  language: "en",
+			  theme: "light",
+			  targetRoles: [],
+			},
+			onboardedAt: new Date().toISOString(),
+			connectedAccounts: [],
+			plan: "free",
+		  };
 
-        setUserProfile(profile);
+		  await saveUserProfile(profile, token);
+		}
+
+		// Always fill missing fields from Clerk user object
+		profile.fullName =
+		  profile.fullName ||
+		  user!.fullName ||
+		  `${user!.firstName || ""} ${user!.lastName || ""}`.trim();
+
+		profile.email =
+		  profile.email || user!.primaryEmailAddress?.emailAddress || "";
+
+		profile.resumeContent = profile.resumeContent || "";
+
+		// Save to state
+		setUserProfile(profile);
+
+		// Load jobs AFTER profile is ready
+		const dbJobs = await fetchJobsFromDb(token);
+		setJobs(dbJobs);
+
       } catch (error) {
         console.error('Profile init error:', error);
       } finally {
@@ -266,14 +300,20 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
 
       <AddJobModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} onAdd={(j) => { handleUpdateJob(j); }} />
       {applyingJob && (
-        <AutomationModal
-          isOpen={!!applyingJobId}
-          job={applyingJob}
-          userProfile={userProfile!}
-          onClose={() => setApplyingJobId(null)}
-          onComplete={() => handleUpdateJob({ ...applyingJob, status: JobStatus.APPLIED_AUTO })}
-        />
-      )}
+		  <AutomationModal
+			isOpen={!!applyingJobId}
+			job={applyingJob}
+			userProfile={userProfile!}
+			onClose={() => setApplyingJobId(null)}
+			onComplete={() => handleUpdateJob({ ...applyingJob, status: JobStatus.APPLIED_AUTO })}
+			onAuthError={() => {
+			  setGmailAuthFailed(true);
+			  notifyGmailAuthFailed();
+			  setApplyingJobId(null);
+			}}
+		  />
+		)}
+
 
       <aside className="w-64 bg-white border-e border-slate-200 flex flex-col shrink-0 z-20">
         <div className="p-6 flex items-center justify-between">
@@ -355,7 +395,24 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
                 </div>
               ) : (
                 jobs.filter((j) => j.status === JobStatus.DETECTED).map((j) => (
-                  <JobCard key={j.id} job={j} onClick={(job) => setSelectedJobId(job.id)} isSelected={selectedJobId === j.id} isChecked={false} onToggleCheck={() => { }} onAutoApply={(e, job) => setApplyingJobId(job.id)} />
+              <JobCard
+				  key={j.id}
+				  job={j}
+				  onClick={(job) => setSelectedJobId(job.id)}
+				  isSelected={selectedJobId === j.id}
+				  isChecked={checkedJobIds.has(j.id)}
+				  onToggleCheck={handleToggleCheck}
+			onAutoApply={(e, job) => {
+				  e.stopPropagation();
+				  if (gmailAuthFailed) {
+					notifyGmailAuthFailed();
+					return;
+				  }
+				  setApplyingJobId(job.id);
+				}}
+
+				/>
+
                 ))
               )}
             </div>

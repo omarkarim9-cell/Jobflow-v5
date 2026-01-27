@@ -61,7 +61,8 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ jobs, onFilterCh
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
       {/* Redesigned Sync Banner */}
-      <div className="flex flex-col md:flex-row gap-4">
+      
+       <div className="flex flex-col md:flex-row gap-4">
         <div className={`flex-1 flex items-center justify-between p-6 rounded-[2rem] shadow-xl overflow-hidden relative transition-colors duration-500 bg-indigo-900 text-white shadow-indigo-900/20`}>
             <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl"></div>
             <div className="flex items-center gap-6 relative z-10">
