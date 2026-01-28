@@ -385,7 +385,7 @@ useEffect(() => {
           <button onClick={() => handleNavigate(ViewState.SELECTED_JOBS)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.SELECTED_JOBS ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><SearchIcon className="w-5 h-5 me-3" /> Scanned Leads</button>
           <button onClick={() => handleNavigate(ViewState.TRACKER)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.TRACKER ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><List className="w-5 h-5 me-3" /> Applications</button>
           <button onClick={() => handleNavigate(ViewState.EMAILS)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.EMAILS ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><Mail className="w-5 h-5 me-3" /> Inbox Scanner</button>
-
+		  
           <div className="my-2 border-t border-slate-100" />
           <p className="px-3 py-1 text-[10px] font-black uppercase text-slate-400 tracking-widest">Intelligence</p>
           <button onClick={() => handleNavigate(ViewState.ANALYTICS)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.ANALYTICS ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><BarChart3 className="w-5 h-5 me-3" /> Analytics</button>
@@ -397,8 +397,20 @@ useEffect(() => {
           <button onClick={() => handleNavigate(ViewState.SUBSCRIPTION)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.SUBSCRIPTION ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><CreditCard className="w-5 h-5 me-3" /> Subscription</button>
           <button onClick={() => handleNavigate(ViewState.MANUAL)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.MANUAL ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><Book className="w-5 h-5 me-3" /> User Guide</button>
           <button onClick={() => handleNavigate(ViewState.SUPPORT)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.SUPPORT ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><LifeBuoy className="w-5 h-5 me-3" /> Support</button>
-          {isOwner && <button onClick={() => handleNavigate(ViewState.DEBUG)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mt-4 ${currentView === ViewState.DEBUG ? 'bg-slate-900 text-white font-bold' : 'text-slate-400 hover:bg-slate-100'}`}><Terminal className="w-5 h-5 me-3" /> Dev Console</button>}
+          /*{isOwner && <button onClick={() => handleNavigate(ViewState.DEBUG)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mt-4 ${currentView === ViewState.DEBUG ? 'bg-slate-900 text-white font-bold' : 'text-slate-400 hover:bg-slate-100'}`}><Terminal className="w-5 h-5 me-3" /> Dev Console</button>}*/
         </div>
+		<div className="my-2 border-t border-slate-100" />
+			<p className="px-3 py-1 text-[10px] font-black uppercase text-slate-400 tracking-widest">Tools</p>
+			<button
+			  onClick={() => handleNavigate(ViewState.EXTRACT_FROM_LINK)}
+			  className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${
+				currentView === ViewState.EXTRACT_FROM_LINK
+				  ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm'
+				  : 'text-slate-600 hover:bg-slate-50'
+			  }`}
+			>
+		  <LinkIcon className="w-5 h-5 me-3" /> Extract from Link
+		</button>
 
         <div className="p-4 border-t border-slate-200">
           <button onClick={() => signOut()} className="w-full flex items-center px-3 py-2.5 rounded-lg text-slate-400 hover:text-red-600 font-bold text-xs uppercase tracking-widest">
@@ -435,7 +447,7 @@ useEffect(() => {
             <div className="h-full overflow-y-auto p-8">
               <div className="flex justify-between items-center mb-8">
                 <h2 className="text-2xl font-black text-slate-900 tracking-tight">Scanned Leads</h2>
-                <button onClick={() => setIsAddModalOpen(true)} className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-black text-xs uppercase flex items-center gap-2 shadow-xl"><Plus className="w-4 h-4" /> Add Lead</button>
+               // <button onClick={() => setIsAddModalOpen(true)} className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-black text-xs uppercase flex items-center gap-2 shadow-xl"><Plus className="w-4 h-4" /> Add Lead</button>
               </div>
               {jobs.filter((j) => j.status === JobStatus.DETECTED).length === 0 ? (
                 <div className="h-64 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-[2rem] text-slate-400">

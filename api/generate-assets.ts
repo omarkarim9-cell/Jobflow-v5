@@ -5,12 +5,16 @@ import { GoogleGenAI } from "@google/genai";
 const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method Not Allowed' });
+  }
 
   try {
     const authRequest = await clerkClient.authenticateRequest(req as any);
     const { userId } = authRequest.toAuth() as any;
-    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
 
     const { jobTitle, company, description, resume, name, email } = req.body;
     if (!jobTitle || !description || !resume) {
@@ -19,9 +23,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-    // Generate both resume and cover letter in parallel
     const [resumeResponse, letterResponse] = await Promise.all([
-      // Tailored Resume
       ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: `Tailor this resume for the ${jobTitle} position at ${company}.
@@ -43,7 +45,6 @@ Return ONLY the tailored resume text, no explanations or markdown.`,
         }
       }),
 
-      // Cover Letter
       ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: `Write a professional cover letter for ${name} (${email}) applying to ${jobTitle} at ${company}.
@@ -66,12 +67,13 @@ Return ONLY the cover letter text, no explanations or markdown.`,
       })
     ]);
 
-    return res.status(200).json({
-      resume: resumeResponse.text || "",
-      letter: letterResponse.text || ""
-    });
+    const resume = await resumeResponse.text();
+    const letter = await letterResponse.text();
+
+    return res.status(200).json({ resume, letter });
   } catch (error: any) {
     console.error('[API/GENERATE-ASSETS] Error:', error.message);
     return res.status(500).json({ error: 'Internal Server Error', details: error.message });
   }
 }
+

@@ -13,6 +13,7 @@ interface JobCardProps {
 }
 
 export const JobCard: React.FC<JobCardProps> = memo(({ job, onClick, isSelected, isChecked, onToggleCheck, onAutoApply }) => {
+  console.log('JobCard received job:', job);
   const getStatusColor = (status: JobStatus) => {
     switch (status) {
       case JobStatus.DETECTED: return 'bg-blue-100 text-blue-700 border-blue-200';
