@@ -16,7 +16,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const { jobTitle, company, description, resume, name, email } = req.body;
+    const { jobTitle, company, description, resume: originalResume, name, email } = req.body;
     if (!jobTitle || !description || !resume) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
@@ -30,7 +30,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
 Job Description: ${description}
 
-Original Resume: ${resume}
+Original Resume: ${Originalresume}
 
 Instructions:
 1. Reorder experience to highlight relevant skills for this specific role
@@ -51,7 +51,7 @@ Return ONLY the tailored resume text, no explanations or markdown.`,
 
 Job Description: ${description}
 
-Candidate Resume: ${resume}
+Candidate Resume: ${Originalresume}
 
 Instructions:
 1. Keep under 400 words
@@ -67,8 +67,9 @@ Return ONLY the cover letter text, no explanations or markdown.`,
       })
     ]);
 
-    const resume = await resumeResponse.text();
-    const letter = await letterResponse.text();
+	const resume = resumeResponse.text;
+	const letter = letterResponse.text;
+
 
     return res.status(200).json({ resume, letter });
   } catch (error: any) {
