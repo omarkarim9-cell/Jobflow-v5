@@ -46,6 +46,7 @@ export interface Job {
   notes?: string;
   logoUrl?: string;
   applicationUrl?: string;
+  interviewQuestions?: string[];
 }
 
 export interface UserPreferences {

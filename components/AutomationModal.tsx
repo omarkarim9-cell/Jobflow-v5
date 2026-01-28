@@ -21,7 +21,7 @@ interface AutomationModalProps {
   onComplete: () => void;
 }
 
-export const AutomationModal: React.FC<AutomationModalProps> = ({ isOpen, onClose, job, userProfile, onComplete, onAuthError }) => {
+export const AutomationModal: React.FC<AutomationModalProps> = ({ isOpen, onClose, job, userProfile, onComplete }) => {
   const [logs, setLogs] = useState<string[]>([]);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState<'running' | 'success' | 'fallback' | 'error'>('running');
@@ -101,9 +101,9 @@ try {
   const is401 = err?.status === 401 || (typeof err?.message === 'string' && err.message.includes('401'));
   addLog(`ERROR: ${err?.message || 'Unknown error'}`);
   setStatus('error');
-  if (is401 && onAuthError) {
+  if (is401 ) {
     addLog('ERROR: Gmail authentication failed (401). Pausing Auto Apply.');
-    onAuthError();
+   ;
   }
 }
 
@@ -112,9 +112,9 @@ try {
     const is401 = err?.status === 401 || (typeof err?.message === 'string' && err.message.includes('401'));
     addLog(`ERROR: ${err?.message || 'Unknown error'}`);
     setStatus('error');
-    if (is401 && onAuthError) {
+    if (is401 ) {
       addLog('ERROR: Gmail authentication failed (401). Pausing Auto Apply.');
-      onAuthError();
+      ;
     }
   }
 };

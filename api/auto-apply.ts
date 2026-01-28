@@ -1,8 +1,6 @@
 // File: pages/api/auto-apply.ts
 // Copy → paste as-is. Replace the TODO helpers with your real auth/token helpers and adapt the email payload as needed.
 
-import type { NextApiRequest, NextApiResponse } from 'next';
-
 /**
  * Helper: call Gmail with one refresh attempt
  */
@@ -104,7 +102,7 @@ async function performApply(job: any, userProfile: any) {
 /**
  * Next.js API handler
  */
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(req: any, res: any) {
   if (req.method !== 'POST') return res.status(405).end();
 
   const { job, userProfile } = req.body ?? {};

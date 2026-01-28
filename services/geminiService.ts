@@ -181,7 +181,7 @@ export const extractJobsFromEmailHtml = async (
         // Optional: filter by target roles if provided
         if (targetRoles.length > 0) {
             const lower = targetRoles.map(r => r.toLowerCase());
-            return jobs.filter(j =>
+            return jobs.filter((j: any) =>
                 lower.some(r => j.title?.toLowerCase().includes(r))
             );
         }

@@ -8,7 +8,7 @@ import { Settings } from './Settings';
 import { Auth } from './Auth';
 import { Onboarding } from './Onboarding';
 import { ApplicationTracker } from './ApplicationTracker';
-import { DebugView } from './DebugView';
+//import { DebugView } from './DebugView';
 import { AddJobModal } from './AddJobModal';
 import { AutomationModal } from './AutomationModal';
 import { NotificationToast, NotificationType } from './NotificationToast';
@@ -200,71 +200,126 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
     return () => window.removeEventListener('jobflow:navigate-settings', handler);
   }, [handleNavigate]);
 
-  // Initialize profile on first load (moved above rendering gate)
-  useEffect(() => {
-    const initProfile = async () => {
-      if (!user || userProfile || !isSignedIn || isDemo) return;
+// --------------------
+// Initialize profile on first load (moved above rendering gate)
+// --------------------
+useEffect(() => {
+  const initProfile = async () => {
+    if (!user || userProfile || !isSignedIn || isDemo) return;
 
-      try {
-       const token = await getToken({ template: "default" });
-        if (!token) return;
+    try {
+      const token = await getToken({ template: "default" });
+      if (!token) return;
 
-        // Try to load existing profile
-        let profile = await getUserProfile(token);
+      // Try to load existing profile
+      let profile = await getUserProfile(token);
 
-		// If no profile exists, create a default one
-		if (!profile) {
-		  profile = {
-			id: user!.id,
-			fullName:
-			  user!.fullName ||
-			  `${user!.firstName || ""} ${user!.lastName || ""}`.trim(),
-			email: user!.primaryEmailAddress?.emailAddress || "",
-			phone: "",
-			resumeContent: "",
-			resumeFileName: "",
-			preferences: {
-			  language: "en",
-			  theme: "light",
-			  targetRoles: [],
-			},
-			onboardedAt: new Date().toISOString(),
-			connectedAccounts: [],
-			plan: "free",
-		  };
+      // If no profile exists, create a default one and persist it
+      if (!profile && user) {
+        // Build preferences to match the UserPreferences type exactly
+        const defaultPreferences = {
+          language: "en" as "en" | "es" | "fr" | "de" | "ar",
+          targetRoles: [] as string[],
+          targetLocations: [] as string[],
+          minSalary: "0",
+          remoteOnly: false,
+        };
 
-		  await saveUserProfile(profile, token);
-		}
+        // Construct a new profile and assert it as UserProfile for saveUserProfile
+        const newProfile: UserProfile = {
+          id: user!.id,
+          fullName:
+            user!.fullName ||
+            `${user!.firstName || ""} ${user!.lastName || ""}`.trim(),
+          email: user!.primaryEmailAddress?.emailAddress || "",
+          phone: "",
+          resumeContent: "",
+          resumeFileName: "",
+          preferences: defaultPreferences,
+          onboardedAt: new Date().toISOString(),
+          connectedAccounts: [] as any[],
+          plan: "free",
+        } as unknown as UserProfile;
 
-		// Always fill missing fields from Clerk user object
-		profile.fullName =
-		  profile.fullName ||
-		  user!.fullName ||
-		  `${user!.firstName || ""} ${user!.lastName || ""}`.trim();
-
-		profile.email =
-		  profile.email || user!.primaryEmailAddress?.emailAddress || "";
-
-		profile.resumeContent = profile.resumeContent || "";
-
-		// Save to state
-		setUserProfile(profile);
-
-		// Load jobs AFTER profile is ready
-		const dbJobs = await fetchJobsFromDb(token);
-		setJobs(dbJobs);
-
-      } catch (error) {
-        console.error('Profile init error:', error);
-      } finally {
-        setLoading(false);
+        try {
+          const saved = await saveUserProfile(newProfile, token);
+          profile = (saved ?? newProfile) as UserProfile;
+        } catch (e) {
+          console.warn("[syncData] initial profile save failed", e);
+          profile = newProfile as UserProfile;
+        }
       }
-    };
 
-    if (isLoaded && isSignedIn && !userProfile) {
-      initProfile();
+      // Fill missing fields from Clerk user object and update state
+      if (profile) {
+        profile.fullName =
+          profile.fullName ||
+          user!.fullName ||
+          `${user!.firstName || ""} ${user!.lastName || ""}`.trim();
+
+        profile.email =
+          profile.email || user!.primaryEmailAddress?.emailAddress || "";
+
+        profile.resumeContent = profile.resumeContent || "";
+
+        // Save to state
+        setUserProfile(profile);
+
+        // Load jobs AFTER profile is ready
+        try {
+          const dbJobs = await fetchJobsFromDb(token);
+          setJobs(dbJobs);
+        } catch (e) {
+          console.warn("[syncData] fetchJobsFromDb failed", e);
+        }
+      }
+    } catch (error) {
+      console.error("Profile init error:", error);
+    } finally {
+      setLoading(false);
     }
-  }, [user, userProfile, isSignedIn, isLoaded, getToken, isDemo]);
+  };
+
+  if (isLoaded && isSignedIn && !userProfile) {
+    initProfile();
+  }
+}, [user, userProfile, isSignedIn, isLoaded, getToken, isDemo]);
+
+// --------------------
+// AutomationModal usage (remove onAuthError prop — not part of AutomationModalProps)
+// --------------------
+// Replace the previous AutomationModal JSX invocation with this snippet.
+// Keep the surrounding JSX/structure intact; only replace the component props.
+{applyingJob && (
+  <AutomationModal 
+    isOpen={!!applyingJobId}
+    job={applyingJob}
+    userProfile={userProfile!}
+    onClose={() => setApplyingJobId(null)}
+    onComplete={() => handleUpdateJob({...applyingJob, status: JobStatus.APPLIED_AUTO})}
+  />
+)}
+
+// --------------------
+// InboxScanner usage (remove resumeContent prop if not in InboxScannerProps)
+// --------------------
+// Replace the previous InboxScanner invocation with this snippet.
+// Keep the surrounding JSX/structure intact; only replace the component props.
+{currentView === ViewState.EMAILS && (
+  <div className="h-full p-6">
+    <InboxScanner
+      onImport={(newJobs) => {
+        setJobs((prev) => [...newJobs, ...prev]);
+        newJobs.forEach(handleUpdateJob);
+      }}
+      sessionAccount={sessionAccount}
+      onConnectSession={setSessionAccount}
+      onDisconnectSession={() => setSessionAccount(null)}
+      showNotification={showNotification}
+      userPreferences={userProfile?.preferences}
+    />
+  </div>
+)}
 
   // --- RENDERING GATE (no hooks after this point) ---
 
@@ -306,15 +361,9 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
 			userProfile={userProfile!}
 			onClose={() => setApplyingJobId(null)}
 			onComplete={() => handleUpdateJob({ ...applyingJob, status: JobStatus.APPLIED_AUTO })}
-			onAuthError={() => {
-			  setGmailAuthFailed(true);
-			  notifyGmailAuthFailed();
-			  setApplyingJobId(null);
-			}}
-		  />
-		)}
-
-
+			
+/>
+)}
       <aside className="w-64 bg-white border-e border-slate-200 flex flex-col shrink-0 z-20">
         <div className="p-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -439,15 +488,13 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
 
           {currentView === ViewState.SETTINGS && <div className="h-full p-8 overflow-y-auto"><Settings userProfile={userProfile!} onUpdate={handleUpdateProfile} dirHandle={null} onDirHandleChange={() => { }} jobs={jobs} showNotification={showNotification} onReset={() => signOut()} isOwner={isOwner} /></div>}
 
-          {currentView === ViewState.EMAILS && <div className="h-full p-6"><InboxScanner onImport={(newJobs) => { setJobs((prev) => [...newJobs, ...prev]); newJobs.forEach(handleUpdateJob); }} sessionAccount={sessionAccount} onConnectSession={setSessionAccount} onDisconnectSession={() => setSessionAccount(null)} showNotification={showNotification} userPreferences={userProfile?.preferences} resumeContent={userProfile?.resumeContent} /></div>}
+          {currentView === ViewState.EMAILS && <div className="h-full p-6"><InboxScanner onImport={(newJobs) => { setJobs((prev) => [...newJobs, ...prev]); newJobs.forEach(handleUpdateJob); }} sessionAccount={sessionAccount} onConnectSession={setSessionAccount} onDisconnectSession={() => setSessionAccount(null)} showNotification={showNotification} userPreferences={userProfile?.preferences} /></div>}
 
           {currentView === ViewState.ANALYTICS && <div className="h-full p-8 overflow-y-auto"><Analytics jobs={jobs} userProfile={userProfile!} /></div>}
           {currentView === ViewState.SUPPORT && <Support />}
           {currentView === ViewState.SUBSCRIPTION && <Subscription userProfile={userProfile!} onUpdateProfile={handleUpdateProfile} showNotification={showNotification} />}
           {currentView === ViewState.DISCOVERY && <JobMap onImport={(newJobs) => { setJobs((prev) => [...newJobs, ...prev]); newJobs.forEach(handleUpdateJob); }} targetRole={userProfile?.preferences?.targetRoles?.[0]} />}
-          {currentView === ViewState.DEBUG && <div className="h-full overflow-y-auto p-8"><DebugView /></div>}
           {currentView === ViewState.MANUAL && <UserManual userProfile={userProfile!} />}
-
           {selectedJobId && currentSelectedJob && (
             <div className="absolute inset-0 z-50 bg-slate-50 overflow-hidden flex flex-col animate-in slide-in-from-right duration-300 shadow-2xl">
               <div className="p-4 bg-white border-b border-slate-200 flex items-center justify-between">
