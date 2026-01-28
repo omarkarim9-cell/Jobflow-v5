@@ -30,7 +30,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
 Job Description: ${description}
 
-Original Resume: ${Originalresume}
+Original Resume: ${originalresume}
 
 Instructions:
 1. Reorder experience to highlight relevant skills for this specific role
@@ -51,7 +51,7 @@ Return ONLY the tailored resume text, no explanations or markdown.`,
 
 Job Description: ${description}
 
-Candidate Resume: ${Originalresume}
+Candidate Resume: ${originalresume}
 
 Instructions:
 1. Keep under 400 words
