@@ -8,6 +8,7 @@ import { Settings } from './Settings';
 import { Auth } from './Auth';
 import { Onboarding } from './Onboarding';
 import { ApplicationTracker } from './ApplicationTracker';
+import { Link as LinkIcon } from 'lucide-react';
 //import { DebugView } from './DebugView';
 import { AddJobModal } from './AddJobModal';
 import { AutomationModal } from './AutomationModal';
