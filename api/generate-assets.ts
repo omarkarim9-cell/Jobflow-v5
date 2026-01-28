@@ -17,7 +17,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const { jobTitle, company, description, resume: originalResume, name, email } = req.body;
-    if (!jobTitle || !description || !resume) {
+    if (!jobTitle || !description || !originalResume) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -30,7 +30,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
 Job Description: ${description}
 
-Original Resume: ${originalresume}
+Original Resume: ${originalResume}
 
 Instructions:
 1. Reorder experience to highlight relevant skills for this specific role
@@ -51,7 +51,7 @@ Return ONLY the tailored resume text, no explanations or markdown.`,
 
 Job Description: ${description}
 
-Candidate Resume: ${originalresume}
+Candidate Resume: ${originalResume}
 
 Instructions:
 1. Keep under 400 words
@@ -67,14 +67,12 @@ Return ONLY the cover letter text, no explanations or markdown.`,
       })
     ]);
 
-	const resume = resumeResponse.text;
-	const letter = letterResponse.text;
+    const tailoredResume = resumeResponse.text;
+    const coverLetter = letterResponse.text;
 
-
-    return res.status(200).json({ resume, letter });
+    return res.status(200).json({ resume: tailoredResume, letter: coverLetter });
   } catch (error: any) {
     console.error('[API/GENERATE-ASSETS] Error:', error.message);
     return res.status(500).json({ error: 'Internal Server Error', details: error.message });
   }
 }
-
