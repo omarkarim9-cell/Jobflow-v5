@@ -13,7 +13,8 @@ export default async function extractFromIndeed(url: string) {
   const company = $("div[data-company-name]").text().trim();
   const location = $("div[data-testid='job-location']").text().trim();
   const description = $("#jobDescriptionText").text().trim();
-  const requirements = [];
+  const requirements: string[] = [];
+
 
   return {
     title: title || "Unknown Role",
