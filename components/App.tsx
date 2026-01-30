@@ -9,7 +9,7 @@ import { Auth } from './Auth';
 import { Onboarding } from './Onboarding';
 import { ApplicationTracker } from './ApplicationTracker';
 import { Link as LinkIcon } from 'lucide-react';
-//import { DebugView } from './DebugView';
+// import { DebugView } from './DebugView';
 import { AddJobModal } from './AddJobModal';
 import { AutomationModal } from './AutomationModal';
 import { NotificationToast, NotificationType } from './NotificationToast';
@@ -49,26 +49,19 @@ import {
 import { JobDetail } from './JobDetail';
 
 const OWNER_EMAIL = 'omar.karim9@gmail.com';
-const [openAddLeadFromSidebar, setOpenAddLeadFromSidebar] = useState(false);
 
 const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
   // Clerk hooks
   const { user, isLoaded, isSignedIn } = useUser();
   const { getToken, signOut } = useAuth();
-  const handleToggleCheck = useCallback((jobId: string) => {
-	  setCheckedJobIds(prev => {
-		const updated = new Set(prev);
-		if (updated.has(jobId)) updated.delete(jobId);
-		else updated.add(jobId);
-		return updated;
-	  });
-	}, []);
 
-  // State hooks (all declared before any effect or conditional return)
+  // State hooks
   const [checkedJobIds, setCheckedJobIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [isOnline, setIsOnline] = useState<boolean>(
+    typeof navigator !== 'undefined' ? navigator.onLine : true
+  );
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [currentView, setCurrentView] = useState<ViewState>(ViewState.DASHBOARD);
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -78,19 +71,30 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
   const [notification, setNotification] = useState<{ message: string; type: NotificationType } | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [gmailAuthFailed, setGmailAuthFailed] = useState(false);
+  const [openAddLeadFromSidebar, setOpenAddLeadFromSidebar] = useState(false);
+
   const notifyGmailAuthFailed = () => {
-	  setNotification({
-		message: 'Gmail session expired. Auto Apply paused — please reconnect your Gmail account.',
-		type: 'error',
-	  });
-	};
+    setNotification({
+      message: 'Gmail session expired. Auto Apply paused — please reconnect your Gmail account.',
+      type: 'error',
+    });
+  };
 
   // Refs and derived flags
   const isSyncLocked = useRef(false);
   const isOwner = user?.primaryEmailAddress?.emailAddress === OWNER_EMAIL || isDemo;
   const isRtl = userProfile?.preferences?.language === 'ar';
 
-  // Callbacks and memos (also before effects)
+  // Callbacks
+  const handleToggleCheck = useCallback((jobId: string) => {
+    setCheckedJobIds((prev) => {
+      const updated = new Set(prev);
+      if (updated.has(jobId)) updated.delete(jobId);
+      else updated.add(jobId);
+      return updated;
+    });
+  }, []);
+
   const handleNavigate = useCallback((view: ViewState) => {
     setSelectedJobId(null);
     setCurrentView(view);
@@ -106,7 +110,7 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
 
       setIsSyncing(true);
       try {
-        const token = isDemo ? 'demo_token' : await getToken({ template: "default" });
+        const token = isDemo ? 'demo_token' : await getToken({ template: 'default' });
         if (!token && !isDemo) {
           setLoading(false);
           setIsSyncing(false);
@@ -140,7 +144,7 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
         return [updated, ...prev];
       });
       if (!isDemo) {
-        const token = await getToken({ template: "default" });
+        const token = await getToken({ template: 'default' });
         if (token) await saveJobToDb(updated, token);
       }
     },
@@ -152,7 +156,7 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
       isSyncLocked.current = true;
       setUserProfile(updated);
       if (!isDemo) {
-        const token = await getToken({ template: "default" });
+        const token = await getToken({ template: 'default' });
         if (token) {
           await saveUserProfile(updated, token);
         }
@@ -165,13 +169,20 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
   );
 
   // Derived memos
-  const currentSelectedJob = useMemo(() => jobs.find((j) => j.id === selectedJobId), [jobs, selectedJobId]);
-  const applyingJob = useMemo(() => jobs.find((j) => j.id === applyingJobId), [jobs, applyingJobId]);
-  const isResumeMissing = !userProfile?.resumeContent || userProfile.resumeContent.length < 50;
+  const currentSelectedJob = useMemo(
+    () => jobs.find((j) => j.id === selectedJobId),
+    [jobs, selectedJobId]
+  );
+  const applyingJob = useMemo(
+    () => jobs.find((j) => j.id === applyingJobId),
+    [jobs, applyingJobId]
+  );
+  const isResumeMissing =
+    !userProfile?.resumeContent || userProfile.resumeContent.length < 50;
 
-  // --- All useEffect hooks placed BEFORE any conditional returns ---
+  // --- Effects (all before any return) ---
 
-  // Online/offline listener + initial sync trigger
+  // Online/offline + initial sync
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
@@ -195,184 +206,156 @@ const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
     };
   }, [isLoaded, isSignedIn, syncData, userProfile, isDemo]);
 
-  // Listener for dashboard banner "Go to Settings" button
+  // Dashboard banner → Settings
   useEffect(() => {
     const handler = () => handleNavigate(ViewState.SETTINGS);
     window.addEventListener('jobflow:navigate-settings', handler);
     return () => window.removeEventListener('jobflow:navigate-settings', handler);
   }, [handleNavigate]);
 
-// --------------------
-// Initialize profile on first load (moved above rendering gate)
-// --------------------
-useEffect(() => {
-  const initProfile = async () => {
-    if (!user || userProfile || !isSignedIn || isDemo) return;
+  // Initialize profile on first load
+  useEffect(() => {
+    const initProfile = async () => {
+      if (!user || userProfile || !isSignedIn || isDemo) return;
 
-    try {
-      const token = await getToken({ template: "default" });
-      if (!token) return;
+      try {
+        const token = await getToken({ template: 'default' });
+        if (!token) return;
 
-      // Try to load existing profile
-      let profile = await getUserProfile(token);
+        let profile = await getUserProfile(token);
 
-      // If no profile exists, create a default one and persist it
-      if (!profile && user) {
-        // Build preferences to match the UserPreferences type exactly
-        const defaultPreferences = {
-          language: "en" as "en" | "es" | "fr" | "de" | "ar",
-          targetRoles: [] as string[],
-          targetLocations: [] as string[],
-          minSalary: "0",
-          remoteOnly: false,
-        };
+        if (!profile && user) {
+          const defaultPreferences = {
+            language: 'en' as 'en' | 'es' | 'fr' | 'de' | 'ar',
+            targetRoles: [] as string[],
+            targetLocations: [] as string[],
+            minSalary: '0',
+            remoteOnly: false,
+          };
 
-        // Construct a new profile and assert it as UserProfile for saveUserProfile
-        const newProfile: UserProfile = {
-          id: user!.id,
-          fullName:
-            user!.fullName ||
-            `${user!.firstName || ""} ${user!.lastName || ""}`.trim(),
-          email: user!.primaryEmailAddress?.emailAddress || "",
-          phone: "",
-          resumeContent: "",
-          resumeFileName: "",
-          preferences: defaultPreferences,
-          onboardedAt: new Date().toISOString(),
-          connectedAccounts: [] as any[],
-          plan: "free",
-        } as unknown as UserProfile;
+          const newProfile: UserProfile = {
+            id: user.id,
+            fullName:
+              user.fullName ||
+              `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+            email: user.primaryEmailAddress?.emailAddress || '',
+            phone: '',
+            resumeContent: '',
+            resumeFileName: '',
+            preferences: defaultPreferences,
+            onboardedAt: new Date().toISOString(),
+            connectedAccounts: [] as any[],
+            plan: 'free',
+          } as unknown as UserProfile;
 
-        try {
-          const saved = await saveUserProfile(newProfile, token);
-          profile = (saved ?? newProfile) as UserProfile;
-        } catch (e) {
-          console.warn("[syncData] initial profile save failed", e);
-          profile = newProfile as UserProfile;
+          try {
+            const saved = await saveUserProfile(newProfile, token);
+            profile = (saved ?? newProfile) as UserProfile;
+          } catch (e) {
+            console.warn('[syncData] initial profile save failed', e);
+            profile = newProfile as UserProfile;
+          }
         }
-      }
 
-      // Fill missing fields from Clerk user object and update state
-      if (profile) {
-        profile.fullName =
-          profile.fullName ||
-          user!.fullName ||
-          `${user!.firstName || ""} ${user!.lastName || ""}`.trim();
+        if (profile) {
+          profile.fullName =
+            profile.fullName ||
+            user.fullName ||
+            `${user.firstName || ''} ${user.lastName || ''}`.trim();
 
-        profile.email =
-          profile.email || user!.primaryEmailAddress?.emailAddress || "";
+          profile.email =
+            profile.email || user.primaryEmailAddress?.emailAddress || '';
+          profile.resumeContent = profile.resumeContent || '';
 
-        profile.resumeContent = profile.resumeContent || "";
+          setUserProfile(profile);
 
-        // Save to state
-        setUserProfile(profile);
-
-        // Load jobs AFTER profile is ready
-        try {
-          const dbJobs = await fetchJobsFromDb(token);
-          setJobs(dbJobs);
-        } catch (e) {
-          console.warn("[syncData] fetchJobsFromDb failed", e);
+          try {
+            const dbJobs = await fetchJobsFromDb(token);
+            setJobs(dbJobs);
+          } catch (e) {
+            console.warn('[syncData] fetchJobsFromDb failed', e);
+          }
         }
+      } catch (error) {
+        console.error('Profile init error:', error);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("Profile init error:", error);
-    } finally {
-      setLoading(false);
+    };
+
+    if (isLoaded && isSignedIn && !userProfile) {
+      initProfile();
     }
-  };
+  }, [user, userProfile, isSignedIn, isLoaded, getToken, isDemo]);
 
-  if (isLoaded && isSignedIn && !userProfile) {
-    initProfile();
-  }
-}, [user, userProfile, isSignedIn, isLoaded, getToken, isDemo]);
+  // Sidebar "Extract from Link" → open Add Lead modal
+  useEffect(() => {
+    if (openAddLeadFromSidebar) {
+      setIsAddModalOpen(true);
+      setOpenAddLeadFromSidebar(false);
+    }
+  }, [openAddLeadFromSidebar]);
 
-// --------------------
-// AutomationModal usage (remove onAuthError prop — not part of AutomationModalProps)
-// --------------------
-// Replace the previous AutomationModal JSX invocation with this snippet.
-// Keep the surrounding JSX/structure intact; only replace the component props.
-{applyingJob && (
-  <AutomationModal 
-    isOpen={!!applyingJobId}
-    job={applyingJob}
-    userProfile={userProfile!}
-    onClose={() => setApplyingJobId(null)}
-    onComplete={() => handleUpdateJob({...applyingJob, status: JobStatus.APPLIED_AUTO})}
-  />
-)}
+  // --- Rendering gate (no hooks after this) ---
 
-// --------------------
-// InboxScanner usage (remove resumeContent prop if not in InboxScannerProps)
-// --------------------
-// Replace the previous InboxScanner invocation with this snippet.
-// Keep the surrounding JSX/structure intact; only replace the component props.
-{currentView === ViewState.EMAILS && (
-  <div className="h-full p-6">
-    <InboxScanner
-      onImport={(newJobs) => {
-        setJobs((prev) => [...newJobs, ...prev]);
-        newJobs.forEach(handleUpdateJob);
-      }}
-      sessionAccount={sessionAccount}
-      onConnectSession={setSessionAccount}
-      onDisconnectSession={() => setSessionAccount(null)}
-      showNotification={showNotification}
-      userPreferences={userProfile?.preferences}
-    />
-  </div>
-)}
-
-  // --- RENDERING GATE (no hooks after this point) ---
-
-  // 1. Clerk session loading
   if (!isLoaded) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-slate-50">
         <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mb-2" />
-        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Loading Session...</p>
+        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+          Loading Session...
+        </p>
       </div>
     );
   }
 
-  // 2. AUTHENTICATION (The Clerk Login Page is the START)
   if (!isSignedIn && !isDemo) {
     return <Auth />;
   }
 
-  // 3. Identity Sync (Wait for profile after sign-in)
   if (loading && !userProfile && (isSignedIn || isDemo)) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-slate-50">
         <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mb-2" />
-        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Syncing Identity...</p>
+        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+          Syncing Identity...
+        </p>
       </div>
     );
   }
-	useEffect(() => {
-	  if (openAddLeadFromSidebar) {
-		setIsAddModalOpen(true);   // same state your Add Lead button uses
-		setOpenAddLeadFromSidebar(false);
-	  }
-	}, [openAddLeadFromSidebar]);
 
-return (
+  // --- Main App ---
 
-  // 5. Main App
+  return (
     <div className="flex h-screen bg-slate-50 overflow-hidden" dir={isRtl ? 'rtl' : 'ltr'}>
-      {notification && <NotificationToast message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
+      {notification && (
+        <NotificationToast
+          message={notification.message}
+          type={notification.type}
+          onClose={() => setNotification(null)}
+        />
+      )}
 
-      <AddJobModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} onAdd={(j) => { handleUpdateJob(j); }} />
+      <AddJobModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onAdd={(j) => {
+          handleUpdateJob(j);
+        }}
+      />
+
       {applyingJob && (
-		  <AutomationModal
-			isOpen={!!applyingJobId}
-			job={applyingJob}
-			userProfile={userProfile!}
-			onClose={() => setApplyingJobId(null)}
-			onComplete={() => handleUpdateJob({ ...applyingJob, status: JobStatus.APPLIED_AUTO })}
-			
-/>
-)}
+        <AutomationModal
+          isOpen={!!applyingJobId}
+          job={applyingJob}
+          userProfile={userProfile!}
+          onClose={() => setApplyingJobId(null)}
+          onComplete={() =>
+            handleUpdateJob({ ...applyingJob, status: JobStatus.APPLIED_AUTO })
+          }
+        />
+      )}
+
       <aside className="w-64 bg-white border-e border-slate-200 flex flex-col shrink-0 z-20">
         <div className="p-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -390,50 +373,164 @@ return (
         </div>
 
         <div className="flex-1 px-4 py-2 overflow-y-auto custom-scrollbar">
-          <button onClick={() => handleNavigate(ViewState.DASHBOARD)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.DASHBOARD ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><LayoutDashboard className="w-5 h-5 me-3" /> Dashboard</button>
-          <button onClick={() => handleNavigate(ViewState.SELECTED_JOBS)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.SELECTED_JOBS ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><SearchIcon className="w-5 h-5 me-3" /> Scanned Leads</button>
-          <button onClick={() => handleNavigate(ViewState.TRACKER)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.TRACKER ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><List className="w-5 h-5 me-3" /> Applications</button>
-          <button onClick={() => handleNavigate(ViewState.EMAILS)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.EMAILS ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><Mail className="w-5 h-5 me-3" /> Inbox Scanner</button>
-		  
-          <div className="my-2 border-t border-slate-100" />
-          <p className="px-3 py-1 text-[10px] font-black uppercase text-slate-400 tracking-widest">Intelligence</p>
-          <button onClick={() => handleNavigate(ViewState.ANALYTICS)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.ANALYTICS ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><BarChart3 className="w-5 h-5 me-3" /> Analytics</button>
-          <button onClick={() => handleNavigate(ViewState.DISCOVERY)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.DISCOVERY ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><MapIcon className="w-5 h-5 me-3" /> Discovery</button>
+          <button
+            onClick={() => handleNavigate(ViewState.DASHBOARD)}
+            className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${
+              currentView === ViewState.DASHBOARD
+                ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm'
+                : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <LayoutDashboard className="w-5 h-5 me-3" /> Dashboard
+          </button>
+          <button
+            onClick={() => handleNavigate(ViewState.SELECTED_JOBS)}
+            className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${
+              currentView === ViewState.SELECTED_JOBS
+                ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm'
+                : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <SearchIcon className="w-5 h-5 me-3" /> Scanned Leads
+          </button>
+          <button
+            onClick={() => handleNavigate(ViewState.TRACKER)}
+            className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${
+              currentView === ViewState.TRACKER
+                ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm'
+                : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <List className="w-5 h-5 me-3" /> Applications
+          </button>
+          <button
+            onClick={() => handleNavigate(ViewState.EMAILS)}
+            className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${
+              currentView === ViewState.EMAILS
+                ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm'
+                : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <Mail className="w-5 h-5 me-3" /> Inbox Scanner
+          </button>
 
           <div className="my-2 border-t border-slate-100" />
-          <p className="px-3 py-1 text-[10px] font-black uppercase text-slate-400 tracking-widest">System</p>
-          <button onClick={() => handleNavigate(ViewState.SETTINGS)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.SETTINGS ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><SettingsIcon className="w-5 h-5 me-3" /> Settings</button>
-          <button onClick={() => handleNavigate(ViewState.SUBSCRIPTION)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.SUBSCRIPTION ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><CreditCard className="w-5 h-5 me-3" /> Subscription</button>
-          <button onClick={() => handleNavigate(ViewState.MANUAL)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.MANUAL ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><Book className="w-5 h-5 me-3" /> User Guide</button>
-          <button onClick={() => handleNavigate(ViewState.SUPPORT)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${currentView === ViewState.SUPPORT ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}><LifeBuoy className="w-5 h-5 me-3" /> Support</button>
-          /*{isOwner && <button onClick={() => handleNavigate(ViewState.DEBUG)} className={`w-full flex items-center px-3 py-2.5 rounded-lg mt-4 ${currentView === ViewState.DEBUG ? 'bg-slate-900 text-white font-bold' : 'text-slate-400 hover:bg-slate-100'}`}><Terminal className="w-5 h-5 me-3" /> Dev Console</button>}*/
+          <p className="px-3 py-1 text-[10px] font-black uppercase text-slate-400 tracking-widest">
+            Intelligence
+          </p>
+          <button
+            onClick={() => handleNavigate(ViewState.ANALYTICS)}
+            className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${
+              currentView === ViewState.ANALYTICS
+                ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm'
+                : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <BarChart3 className="w-5 h-5 me-3" /> Analytics
+          </button>
+          <button
+            onClick={() => handleNavigate(ViewState.DISCOVERY)}
+            className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${
+              currentView === ViewState.DISCOVERY
+                ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm'
+                : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <MapIcon className="w-5 h-5 me-3" /> Discovery
+          </button>
+
+          <div className="my-2 border-t border-slate-100" />
+          <p className="px-3 py-1 text-[10px] font-black uppercase text-slate-400 tracking-widest">
+            System
+          </p>
+          <button
+            onClick={() => handleNavigate(ViewState.SETTINGS)}
+            className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${
+              currentView === ViewState.SETTINGS
+                ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm'
+                : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <SettingsIcon className="w-5 h-5 me-3" /> Settings
+          </button>
+          <button
+            onClick={() => handleNavigate(ViewState.SUBSCRIPTION)}
+            className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${
+              currentView === ViewState.SUBSCRIPTION
+                ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm'
+                : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <CreditCard className="w-5 h-5 me-3" /> Subscription
+          </button>
+          <button
+            onClick={() => handleNavigate(ViewState.MANUAL)}
+            className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${
+              currentView === ViewState.MANUAL
+                ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm'
+                : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <Book className="w-5 h-5 me-3" /> User Guide
+          </button>
+          <button
+            onClick={() => handleNavigate(ViewState.SUPPORT)}
+            className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${
+              currentView === ViewState.SUPPORT
+                ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm'
+                : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            <LifeBuoy className="w-5 h-5 me-3" /> Support
+          </button>
+          {/* {isOwner && (
+            <button
+              onClick={() => handleNavigate(ViewState.DEBUG)}
+              className={`w-full flex items-center px-3 py-2.5 rounded-lg mt-4 ${
+                currentView === ViewState.DEBUG
+                  ? 'bg-slate-900 text-white font-bold'
+                  : 'text-slate-400 hover:bg-slate-100'
+              }`}
+            >
+              <Terminal className="w-5 h-5 me-3" /> Dev Console
+            </button>
+          )} */}
         </div>
-		<div className="my-2 border-t border-slate-100" />
-			<p className="px-3 py-1 text-[10px] font-black uppercase text-slate-400 tracking-widest">Tools</p>
-			<button
-			onClick={() => {
-				  setOpenAddLeadFromSidebar(true);
-				  handleNavigate(ViewState.SELECTED_JOBS);
-				}}
 
-				className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${
-				currentView === ViewState.EXTRACT_FROM_LINK
-				  ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm'
-				  : 'text-slate-600 hover:bg-slate-50'
-			  }`}
-			>
-		  <LinkIcon className="w-5 h-5 me-3" /> Extract from Link
-		</button>
+        <div className="my-2 border-t border-slate-100" />
+        <p className="px-3 py-1 text-[10px] font-black uppercase text-slate-400 tracking-widest">
+          Tools
+        </p>
+        <button
+          onClick={() => {
+            setOpenAddLeadFromSidebar(true);
+            handleNavigate(ViewState.SELECTED_JOBS);
+          }}
+          className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${
+            currentView === ViewState.EXTRACT_FROM_LINK
+              ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm'
+              : 'text-slate-600 hover:bg-slate-50'
+          }`}
+        >
+          <LinkIcon className="w-5 h-5 me-3" /> Extract from Link
+        </button>
 
         <div className="p-4 border-t border-slate-200">
-          <button onClick={() => signOut()} className="w-full flex items-center px-3 py-2.5 rounded-lg text-slate-400 hover:text-red-600 font-bold text-xs uppercase tracking-widest">
+          <button
+            onClick={() => signOut()}
+            className="w-full flex items-center px-3 py-2.5 rounded-lg text-slate-400 hover:text-red-600 font-bold text-xs uppercase tracking-widest"
+          >
             <LogOut className="w-4 h-4 me-3" /> Sign Out
           </button>
         </div>
       </aside>
 
       <main className="flex-1 overflow-hidden relative flex flex-col">
-        {!isOnline && <div className="bg-amber-500 text-white px-6 py-2 flex items-center justify-between text-[10px] font-black uppercase tracking-widest animate-in slide-in-from-top"><span>Connection lost. Cloud sync paused.</span></div>}
+        {!isOnline && (
+          <div className="bg-amber-500 text-white px-6 py-2 flex items-center justify-between text-[10px] font-black uppercase tracking-widest animate-in slide-in-from-top">
+            <span>Connection lost. Cloud sync paused.</span>
+          </div>
+        )}
         <div className="flex-1 overflow-hidden relative">
           {currentView === ViewState.DASHBOARD && (
             <div className="h-full overflow-y-auto p-8">
@@ -445,11 +542,21 @@ return (
                       <Sparkles className="w-8 h-8 text-white" />
                     </div>
                     <div className="text-white">
-                      <h3 className="text-xl font-black uppercase tracking-tight">Complete Your AI Profile</h3>
-                      <p className="text-sm font-medium opacity-80 mt-1 max-w-lg">Unlock deep intelligence features by uploading your resume.</p>
+                      <h3 className="text-xl font-black uppercase tracking-tight">
+                        Complete Your AI Profile
+                      </h3>
+                      <p className="text-sm font-medium opacity-80 mt-1 max-w-lg">
+                        Unlock deep intelligence features by uploading your resume.
+                      </p>
                     </div>
                   </div>
-                  <button onClick={() => handleNavigate(ViewState.SETTINGS)} className="z-10 px-8 py-4 bg-white text-indigo-600 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-50 transition-all flex items-center gap-2 group/btn">Get Started <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" /></button>
+                  <button
+                    onClick={() => handleNavigate(ViewState.SETTINGS)}
+                    className="z-10 px-8 py-4 bg-white text-indigo-600 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-indigo-50 transition-all flex items-center gap-2 group/btn"
+                  >
+                    Get Started{' '}
+                    <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
+                  </button>
                 </div>
               )}
               <DashboardStats jobs={jobs} userProfile={userProfile!} />
@@ -459,82 +566,151 @@ return (
           {currentView === ViewState.SELECTED_JOBS && (
             <div className="h-full overflow-y-auto p-8">
               <div className="flex justify-between items-center mb-8">
-                <h2 className="text-2xl font-black text-slate-900 tracking-tight">Scanned Leads</h2>
-               // <button onClick={() => setIsAddModalOpen(true)} className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-black text-xs uppercase flex items-center gap-2 shadow-xl"><Plus className="w-4 h-4" /> Add Lead</button>
+                <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+                  Scanned Leads
+                </h2>
+                {/* <button
+                  onClick={() => setIsAddModalOpen(true)}
+                  className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-black text-xs uppercase flex items-center gap-2 shadow-xl"
+                >
+                  <Plus className="w-4 h-4" /> Add Lead
+                </button> */}
               </div>
               {jobs.filter((j) => j.status === JobStatus.DETECTED).length === 0 ? (
                 <div className="h-64 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-[2rem] text-slate-400">
                   <SearchIcon className="w-10 h-10 mb-4 opacity-20" />
-                  <p className="font-bold text-xs uppercase tracking-widest text-center">No leads found.</p>
+                  <p className="font-bold text-xs uppercase tracking-widest text-center">
+                    No leads found.
+                  </p>
                 </div>
               ) : (
-                jobs.filter((j) => j.status === JobStatus.DETECTED).map((j) => (
-              <JobCard
-				  key={j.id}
-				  job={j}
-				  onClick={(job) => setSelectedJobId(job.id)}
-				  isSelected={selectedJobId === j.id}
-				  isChecked={checkedJobIds.has(j.id)}
-				  onToggleCheck={handleToggleCheck}
-			onAutoApply={(e, job) => {
-				  e.stopPropagation();
-				  if (gmailAuthFailed) {
-					notifyGmailAuthFailed();
-					return;
-				  }
-				  setApplyingJobId(job.id);
-				}}
-
-				/>
-
-                ))
+                jobs
+                  .filter((j) => j.status === JobStatus.DETECTED)
+                  .map((j) => (
+                    <JobCard
+                      key={j.id}
+                      job={j}
+                      onClick={(job) => setSelectedJobId(job.id)}
+                      isSelected={selectedJobId === j.id}
+                      isChecked={checkedJobIds.has(j.id)}
+                      onToggleCheck={handleToggleCheck}
+                      onAutoApply={(e, job) => {
+                        e.stopPropagation();
+                        if (gmailAuthFailed) {
+                          notifyGmailAuthFailed();
+                          return;
+                        }
+                        setApplyingJobId(job.id);
+                      }}
+                    />
+                  ))
               )}
             </div>
           )}
 
           {currentView === ViewState.TRACKER && (
-  <ApplicationTracker
-    jobs={jobs}
-    onUpdateStatus={async (id, s) => {
-      const job = jobs.find((j) => j.id === id);
-      if (job) handleUpdateJob({ ...job, status: s });
-    }}
-    onDelete={async (id) => {
-      setJobs((prev) => prev.filter((j) => j.id !== id));
-      if (!isDemo) {
-        const token = await getToken({ template: "default" });
-        if (token) await deleteJobFromDb(id, token);
-      }
-    }}
-    onSelect={(j) => setSelectedJobId(j.id)}
-  />
-)}
+            <ApplicationTracker
+              jobs={jobs}
+              onUpdateStatus={async (id, s) => {
+                const job = jobs.find((j) => j.id === id);
+                if (job) handleUpdateJob({ ...job, status: s });
+              }}
+              onDelete={async (id) => {
+                setJobs((prev) => prev.filter((j) => j.id !== id));
+                if (!isDemo) {
+                  const token = await getToken({ template: 'default' });
+                  if (token) await deleteJobFromDb(id, token);
+                }
+              }}
+              onSelect={(j) => setSelectedJobId(j.id)}
+            />
+          )}
 
+          {currentView === ViewState.SETTINGS && (
+            <div className="h-full p-8 overflow-y-auto">
+              <Settings
+                userProfile={userProfile!}
+                onUpdate={handleUpdateProfile}
+                dirHandle={null}
+                onDirHandleChange={() => {}}
+                jobs={jobs}
+                showNotification={showNotification}
+                onReset={() => signOut()}
+                isOwner={isOwner}
+              />
+            </div>
+          )}
 
-          {currentView === ViewState.SETTINGS && <div className="h-full p-8 overflow-y-auto"><Settings userProfile={userProfile!} onUpdate={handleUpdateProfile} dirHandle={null} onDirHandleChange={() => { }} jobs={jobs} showNotification={showNotification} onReset={() => signOut()} isOwner={isOwner} /></div>}
+          {currentView === ViewState.EMAILS && (
+            <div className="h-full p-6">
+              <InboxScanner
+                onImport={(newJobs) => {
+                  setJobs((prev) => [...newJobs, ...prev]);
+                  newJobs.forEach(handleUpdateJob);
+                }}
+                sessionAccount={sessionAccount}
+                onConnectSession={setSessionAccount}
+                onDisconnectSession={() => setSessionAccount(null)}
+                showNotification={showNotification}
+                userPreferences={userProfile?.preferences}
+              />
+            </div>
+          )}
 
-          {currentView === ViewState.EMAILS && <div className="h-full p-6"><InboxScanner onImport={(newJobs) => { setJobs((prev) => [...newJobs, ...prev]); newJobs.forEach(handleUpdateJob); }} sessionAccount={sessionAccount} onConnectSession={setSessionAccount} onDisconnectSession={() => setSessionAccount(null)} showNotification={showNotification} userPreferences={userProfile?.preferences} /></div>}
+          {currentView === ViewState.ANALYTICS && (
+            <div className="h-full p-8 overflow-y-auto">
+              <Analytics jobs={jobs} userProfile={userProfile!} />
+            </div>
+          )}
 
-          {currentView === ViewState.ANALYTICS && <div className="h-full p-8 overflow-y-auto"><Analytics jobs={jobs} userProfile={userProfile!} /></div>}
           {currentView === ViewState.SUPPORT && <Support />}
-          {currentView === ViewState.SUBSCRIPTION && <Subscription userProfile={userProfile!} onUpdateProfile={handleUpdateProfile} showNotification={showNotification} />}
-          {currentView === ViewState.DISCOVERY && <JobMap onImport={(newJobs) => { setJobs((prev) => [...newJobs, ...prev]); newJobs.forEach(handleUpdateJob); }} targetRole={userProfile?.preferences?.targetRoles?.[0]} />}
+
+          {currentView === ViewState.SUBSCRIPTION && (
+            <Subscription
+              userProfile={userProfile!}
+              onUpdateProfile={handleUpdateProfile}
+              showNotification={showNotification}
+            />
+          )}
+
+          {currentView === ViewState.DISCOVERY && (
+            <JobMap
+              onImport={(newJobs) => {
+                setJobs((prev) => [...newJobs, ...prev]);
+                newJobs.forEach(handleUpdateJob);
+              }}
+              targetRole={userProfile?.preferences?.targetRoles?.[0]}
+            />
+          )}
+
           {currentView === ViewState.MANUAL && <UserManual userProfile={userProfile!} />}
+
           {selectedJobId && currentSelectedJob && (
             <div className="absolute inset-0 z-50 bg-slate-50 overflow-hidden flex flex-col animate-in slide-in-from-right duration-300 shadow-2xl">
               <div className="p-4 bg-white border-b border-slate-200 flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <button onClick={() => setSelectedJobId(null)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-500">
+                  <button
+                    onClick={() => setSelectedJobId(null)}
+                    className="p-2 hover:bg-slate-100 rounded-lg text-slate-500"
+                  >
                     <X className="w-5 h-5" />
                   </button>
-                  <span className="text-sm font-bold text-slate-400">/ {currentSelectedJob.company}</span>
+                  <span className="text-sm font-bold text-slate-400">
+                    / {currentSelectedJob.company}
+                  </span>
                 </div>
                 <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border bg-indigo-50 text-indigo-600 border-indigo-100">
                   {currentSelectedJob.status}
                 </span>
               </div>
               <div className="flex-1 overflow-hidden">
-                <JobDetail job={currentSelectedJob} userProfile={userProfile!} onUpdateJob={handleUpdateJob} onClose={() => setSelectedJobId(null)} showNotification={showNotification} />
+                <JobDetail
+                  job={currentSelectedJob}
+                  userProfile={userProfile!}
+                  onUpdateJob={handleUpdateJob}
+                  onClose={() => setSelectedJobId(null)}
+                  showNotification={showNotification}
+                />
               </div>
             </div>
           )}
