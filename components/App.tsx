@@ -358,7 +358,6 @@ useEffect(() => {
 return (
 
   // 5. Main App
-  return (
     <div className="flex h-screen bg-slate-50 overflow-hidden" dir={isRtl ? 'rtl' : 'ltr'}>
       {notification && <NotificationToast message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
 
