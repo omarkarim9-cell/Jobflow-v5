@@ -49,6 +49,7 @@ import {
 import { JobDetail } from './JobDetail';
 
 const OWNER_EMAIL = 'omar.karim9@gmail.com';
+const [openAddLeadFromSidebar, setOpenAddLeadFromSidebar] = useState(false);
 
 const AppContent: React.FC<{ isDemo?: boolean }> = ({ isDemo = false }) => {
   // Clerk hooks
