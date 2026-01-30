@@ -319,7 +319,9 @@ export const InboxScanner: React.FC<InboxScannerProps> = ({
           company: job.company || 'Unknown Company',
           location: job.location || 'Remote',
           salaryRange: job.salaryRange,
-          description: job.description || '',
+          description: job.description && job.description.trim() !== ""
+		  ? job.description
+		  : `Description not available in email. View full details at: ${job.applicationUrl}`,
           source: (job.source as any) || 'Email',
           detectedAt: new Date().toISOString(),
           status: JobStatus.DETECTED,

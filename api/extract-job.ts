@@ -1,6 +1,9 @@
-﻿import { VercelRequest, VercelResponse } from '@vercel/node';
+import { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClerkClient } from '../clerk-shim';
-import { GoogleGenAI, Type } from "@google/genai";
+
+import extractFromIndeed from '../extractors/indeed';
+import extractFromLinkedIn from '../extractors/linkedin';
+import extractFromGeneric from '../extractors/generic';
 
 const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
 
@@ -16,31 +19,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { url } = req.body;
     if (!url) return res.status(400).json({ error: 'Missing URL' });
 
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: `Extract the job details from this URL: ${url}. Return ONLY a JSON object with title, company, location, description, and requirements.`,
-      config: {
-        tools: [{googleSearch: {}}],
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            title: { type: Type.STRING },
-            company: { type: Type.STRING },
-            location: { type: Type.STRING },
-            description: { type: Type.STRING },
-            requirements: { type: Type.STRING }
-          },
-          required: ["title", "company", "description"]
-        }
-      }
-    });
+    let hostname = "";
+    try {
+      hostname = new URL(url).hostname.toLowerCase();
+    } catch {
+      const data = await extractFromGeneric(url);
+      return res.status(200).json({ data });
+    }
 
-    const data = JSON.parse(response.text || "{}");
-    const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+    if (hostname.includes("indeed.com")) {
+      const data = await extractFromIndeed(url);
+      return res.status(200).json({ data });
+    }
 
-    return res.status(200).json({ data, sources });
+    if (hostname.includes("linkedin.com")) {
+      const data = await extractFromLinkedIn(url);
+      return res.status(200).json({ data });
+    }
+
+    const data = await extractFromGeneric(url);
+    return res.status(200).json({ data });
+
   } catch (error: any) {
     console.error('[API/EXTRACT-JOB] Error:', error.message);
     return res.status(500).json({ error: 'Internal Server Error' });

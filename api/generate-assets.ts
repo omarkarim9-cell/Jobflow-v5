@@ -1,8 +1,5 @@
 ﻿import { VercelRequest, VercelResponse } from '@vercel/node';
-import { createClerkClient } from '../clerk-shim';
 import { GoogleGenAI } from "@google/genai";
-
-const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -10,13 +7,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const authRequest = await clerkClient.authenticateRequest(req as any);
-    const { userId } = authRequest.toAuth() as any;
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
     const { jobTitle, company, description, resume: originalResume, name, email } = req.body;
+
     if (!jobTitle || !description || !originalResume) {
       return res.status(400).json({ error: 'Missing required fields' });
     }

@@ -437,7 +437,7 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, userProfile, onUpdate
               className="w-full md:w-48 bg-indigo-600 text-white py-4 rounded-2xl font-black text-[10px] uppercase hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-2 shadow-xl"
             >
               {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-              {job.customizedResume ? 'Regenerate All' : 'Generate All Assets'}
+              {job.customizedResume ? 'Regenerate All' : 'Write Tailored Resume & Letter'}
             </button>
           </div>
         </div>

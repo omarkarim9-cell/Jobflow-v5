@@ -348,6 +348,14 @@ useEffect(() => {
       </div>
     );
   }
+	useEffect(() => {
+	  if (openAddLeadFromSidebar) {
+		setIsAddModalOpen(true);   // same state your Add Lead button uses
+		setOpenAddLeadFromSidebar(false);
+	  }
+	}, [openAddLeadFromSidebar]);
+
+return (
 
   // 5. Main App
   return (
@@ -403,8 +411,12 @@ useEffect(() => {
 		<div className="my-2 border-t border-slate-100" />
 			<p className="px-3 py-1 text-[10px] font-black uppercase text-slate-400 tracking-widest">Tools</p>
 			<button
-			  onClick={() => handleNavigate(ViewState.EXTRACT_FROM_LINK)}
-			  className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${
+			onClick={() => {
+				  setOpenAddLeadFromSidebar(true);
+				  handleNavigate(ViewState.SELECTED_JOBS);
+				}}
+
+				className={`w-full flex items-center px-3 py-2.5 rounded-lg mb-1 transition-all ${
 				currentView === ViewState.EXTRACT_FROM_LINK
 				  ? 'bg-indigo-50 text-indigo-700 font-bold shadow-sm'
 				  : 'text-slate-600 hover:bg-slate-50'

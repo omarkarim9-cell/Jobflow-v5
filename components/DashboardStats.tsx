@@ -60,47 +60,7 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ jobs, onFilterCh
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
-      {/* Redesigned Sync Banner */}
-      
-       <div className="flex flex-col md:flex-row gap-4">
-        <div className={`flex-1 flex items-center justify-between p-6 rounded-[2rem] shadow-xl overflow-hidden relative transition-colors duration-500 bg-indigo-900 text-white shadow-indigo-900/20`}>
-            <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-            <div className="flex items-center gap-6 relative z-10">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border bg-indigo-500/30 border-white/10`}>
-                    <Activity className="w-7 h-7 text-indigo-300 animate-pulse" />
-                </div>
-                <div>
-                    <h2 className="text-lg font-black tracking-tight flex items-center gap-2">
-                        System Status: Active
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-                    </h2>
-                    <p className={`text-[10px] font-black uppercase tracking-[0.2em] text-indigo-300 mt-1`}>
-                        Cloud Automation Services Ready
-                    </p>
-                </div>
-            </div>
-            <div className="flex items-center gap-3 px-4 py-2 rounded-xl bg-white/10 border border-white/10 relative z-10">
-                <ShieldCheck className="w-5 h-5 text-emerald-400" />
-                <span className="text-[10px] font-black uppercase tracking-widest">Secured Node</span>
-            </div>
-        </div>
-
-        <div className="flex-1 bg-white border border-slate-200 p-6 rounded-[2rem] flex items-center gap-6 shadow-sm group hover:border-indigo-300 transition-all">
-            <div className="w-14 h-14 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600 shrink-0 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
-                <Sparkles className="w-7 h-7" />
-            </div>
-            <div className="min-w-0">
-                <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.1em] flex items-center">
-                    <AlertCircle className="w-4 h-4 mr-2 text-amber-500" /> Intelligence Profile
-                </h3>
-                <p className="text-[10px] text-slate-500 font-bold leading-relaxed mt-1">
-                    Ensure your <strong>Target Roles</strong> are updated in Profile to optimize AI extraction accuracy.
-                </p>
-            </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between hover:border-slate-300 transition-all hover:shadow-md group">
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Scanned</p>

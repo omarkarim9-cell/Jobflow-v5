@@ -100,8 +100,18 @@ export const JobCard: React.FC<JobCardProps> = memo(({ job, onClick, isSelected,
              </p>
 			 {job.description && (
 			  <p className="text-xs text-slate-600 mt-1 line-clamp-2">
-				{job.description}
-			  </p>
+			  {job.description.startsWith("Description not available")
+				? (
+					<button
+					  onClick={() => window.open(job.applicationUrl, "_blank")}
+					  className="text-blue-600 underline text-xs font-medium"
+					>
+					  View Full Job Description
+					</button>
+				  )
+				: job.description}
+				</p>
+
 			)}
 
            </div>

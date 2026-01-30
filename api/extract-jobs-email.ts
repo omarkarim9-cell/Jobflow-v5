@@ -18,29 +18,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: `Identify all job listings in this email content: ${html.substring(0, 20000)}. For each job, extract the title, company, location, and application URL.`,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            jobs: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  title: { type: Type.STRING },
-                  company: { type: Type.STRING },
-                  location: { type: Type.STRING },
-                  applicationUrl: { type: Type.STRING }
-                }
-              }
-            }
-          }
-        }
-      }
-    });
+		  model: "gemini-3-flash-preview",
+		  contents: `Identify all job listings in this email content: ${html.substring(0, 20000)}. 
+		For each job, extract:
+		- title
+		- company
+		- location
+		- application URL
+		- short description if present in the email (2–3 lines).
+		If no description is present, return an empty string for description.`,
+		  config: {
+			responseMimeType: "application/json",
+			responseSchema: {
+			  type: Type.OBJECT,
+			  properties: {
+				jobs: {
+				  type: Type.ARRAY,
+				  items: {
+					type: Type.OBJECT,
+					properties: {
+					  title: { type: Type.STRING },
+					  company: { type: Type.STRING },
+					  location: { type: Type.STRING },
+					  applicationUrl: { type: Type.STRING },
+					  description: { type: Type.STRING }
+					}
+				  }
+				}
+			  }
+			}
+		  }
+		});
+
 
     const data = JSON.parse(response.text || '{"jobs": []}');
     return res.status(200).json(data);
