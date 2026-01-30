@@ -147,22 +147,30 @@ export const JobDetail: React.FC<JobDetailProps> = ({ job, userProfile, onUpdate
       return;
     }
 
-    setIsGenerating(true);
-    notify(`Generating application materials for ${job.company}...`, 'success');
+   setIsGenerating(true);
+notify(`Generating application materials for ${job.company}...`, 'success');
 
-    try {
-      const response = await fetch('/api/generate-assets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jobTitle: job.title,
-          company: job.company,
-          description: job.description,
-          resume: userProfile.resumeContent,
-          name: userProfile.fullName,
-          email: (userProfile as any).email
-        })
-      });
+try {
+  const description =
+    job.fullDescription?.trim() ||
+    job.description?.trim() ||
+    (job.requirements?.length ? job.requirements.join('\n') : '') ||
+    job.rawHtml?.replace(/<[^>]+>/g, '').trim() ||
+    '';
+
+  const response = await fetch('/api/generate-assets', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      jobTitle: job.title,
+      company: job.company,
+      description,
+      resume: userProfile.resumeContent,
+      name: userProfile.fullName,
+      email: userProfile.email
+    })
+  });
+
 
       if (!response.ok) throw new Error('Generation failed');
 
