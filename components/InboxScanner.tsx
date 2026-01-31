@@ -18,6 +18,7 @@ import {
   Settings,
   Link,
 } from 'lucide-react';
+import { extractJobsFromEmailHtml } from '../services/geminiService';
 import { listMessages, getMessageBody, decodeEmailBody } from '../services/gmailService';
 import { NotificationType } from './NotificationToast';
 import { EmailConnectModal } from './EmailConnectModal';
@@ -243,39 +244,8 @@ export const InboxScanner: React.FC<InboxScannerProps> = ({
     setIsBatchProcessing(true);
 
     const uniqueJobsMap = new Map<string, Partial<Job>>();
-    const batchSize = 3; // Reduced for URL fetching
+    const batchSize = 5;
     let processedCount = 0;
-
-    // Helper: Fetch full job description from URL
-    const fetchFullJobDescription = async (job: any): Promise<string> => {
-      if (!job.applicationUrl) return job.description || '';
-      
-      try {
-        console.log(`Fetching full description from: ${job.applicationUrl}`);
-        const response = await fetch('/api/extract-job', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: job.applicationUrl })
-        });
-        
-        if (!response.ok) {
-          throw new Error(`URL extraction failed: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        return data.data?.description || job.description || '';
-      } catch (error) {
-        console.error('URL extraction error:', error);
-        return job.description || '';
-      }
-    };
-
-    // Helper: Check if description is sufficient for AI
-    const isDescriptionSufficient = (desc: string): boolean => {
-      if (!desc) return false;
-      const cleaned = desc.trim().replace(/\s+/g, ' ');
-      return cleaned.length > 150 && !cleaned.includes('Description not available');
-    };
 
     try {
       for (let i = 0; i < emailList.length; i += batchSize) {
@@ -291,47 +261,28 @@ export const InboxScanner: React.FC<InboxScannerProps> = ({
               const bodyData = await getMessageBody(email.accessToken, email.id);
               const htmlContent = decodeEmailBody(bodyData);
 
-              // STEP 1: Try email extraction first
-              const response = await fetch('/api/extract-jobs-email', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ html: htmlContent })
-              });
+              // Use Gemini-based extraction (Option B)
+              const extracted = await extractJobsFromEmailHtml(
+                htmlContent,
+                userPreferences?.targetRoles || []
+              );
 
-              if (!response.ok) {
-                throw new Error(`API error: ${response.status}`);
-              }
-
-              const data = await response.json();
-              const extracted = data.jobs || [];
-
-              // Process each extracted job
-              for (const job of extracted) {
+              extracted.forEach((job: any) => {
                 const { score } = calculateMatch(job);
+
                 const stableId = job.applicationUrl
                   ? safeBase64(job.applicationUrl)
                   : `job-${Date.now()}-${Math.random()}`;
 
-                // Skip if already processed
-                if (uniqueJobsMap.has(stableId)) continue;
-
-                let finalDescription = job.description || '';
-                
-                // STEP 2: Check if description is sufficient
-                if (!isDescriptionSufficient(finalDescription) && job.applicationUrl) {
-                  console.log(`Description insufficient (${finalDescription?.length || 0} chars), fetching from URL...`);
-                  finalDescription = await fetchFullJobDescription(job);
+                if (!uniqueJobsMap.has(stableId)) {
+                  uniqueJobsMap.set(stableId, {
+                    ...job,
+                    id: stableId,
+                    source: email.isRealGmail ? 'Gmail' : email.from,
+                    matchScore: score,
+                  });
                 }
-
-                // STEP 3: Store the enhanced job
-                uniqueJobsMap.set(stableId, {
-                  ...job,
-                  id: stableId,
-                  description: finalDescription,
-                  source: email.isRealGmail ? 'Gmail' : email.from,
-                  matchScore: score,
-                });
-              }
+              });
             } catch (e: any) {
               if (e?.message === 'TOKEN_EXPIRED') {
                 setTokenExpired(true);
@@ -346,12 +297,11 @@ export const InboxScanner: React.FC<InboxScannerProps> = ({
           setProgress(
             `Analyzing ${Math.min(processedCount, emailList.length)} / ${
               emailList.length
-            } emails... (${uniqueJobsMap.size} jobs found)`
+            } emails...`
           );
         }
 
-        // Add delay to avoid rate limiting on URL fetching
-        await new Promise((r) => setTimeout(r, 500));
+        await new Promise((r) => setTimeout(r, 100));
       }
 
       if (!isMounted.current) return;
@@ -369,7 +319,9 @@ export const InboxScanner: React.FC<InboxScannerProps> = ({
           company: job.company || 'Unknown Company',
           location: job.location || 'Remote',
           salaryRange: job.salaryRange,
-          description: job.description || 'No description available.',
+          description: job.description && job.description.trim() !== ""
+		  ? job.description
+		  : `Description not available in email. View full details at: ${job.applicationUrl}`,
           source: (job.source as any) || 'Email',
           detectedAt: new Date().toISOString(),
           status: JobStatus.DETECTED,
@@ -378,15 +330,7 @@ export const InboxScanner: React.FC<InboxScannerProps> = ({
           applicationUrl: job.applicationUrl,
         }));
 
-        // Log description quality for debugging
-        console.log('Extracted jobs with descriptions:', newJobs.map(j => ({
-          title: j.title,
-          descLength: j.description?.length,
-          hasUrl: !!j.applicationUrl
-        })));
-
         onImport(newJobs);
-        showNotification(`Found ${newJobs.length} jobs with enhanced descriptions!`, 'success');
       }
     } catch (e: any) {
       if (isMounted.current) {
