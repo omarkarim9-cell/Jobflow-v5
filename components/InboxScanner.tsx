@@ -143,13 +143,13 @@ export const InboxScanner: React.FC<InboxScannerProps> = ({
 
   const handleScanRealInbox = async () => {
     // Pro gating
-    if (!isPro() && parseInt(dateRange) > 3) {
-      alert(
-        'Pro Plan Required: Scanning more than 3 days of emails requires a Pro subscription.'
-      );
-      setDateRange('3');
-      return;
-    }
+    //if (!isPro() && parseInt(dateRange) > 3) {
+      //alert(
+        //'Pro Plan Required: Scanning more than 3 days of emails requires a Pro subscription.'
+      //);
+      //setDateRange('3');
+      //return;
+    //}
 
     setTokenExpired(false);
 
