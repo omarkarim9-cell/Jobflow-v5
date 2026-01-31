@@ -170,10 +170,13 @@ export const InboxScanner: React.FC<InboxScannerProps> = ({
       if (sessionAccount.provider === 'Gmail') {
         // Real Gmail API
         const query = `subject:(job OR jobs OR vacancy OR career OR hiring OR opportunity) newer_than:${dateRange}d`;
-        const messages = await listMessages(sessionAccount.accessToken, 50, query);
+       const messages = await listMessages(sessionAccount.accessToken, 50, query);
 
-        if (isMounted.current) {
-          const realEmails = messages.map((msg: any) => ({
+		if (isMounted.current) {
+		  // Ensure messages is an array
+		  const messagesArray = Array.isArray(messages) ? messages : [];
+		  
+		  const realEmails = messagesArray.map((msg: any) => ({
             id: msg.id,
             from: 'Gmail API',
             subject: `Email ID: ${msg.id}`,
