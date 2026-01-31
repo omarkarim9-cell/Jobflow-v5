@@ -62,27 +62,36 @@ export const saveUserProfile = async (profile: UserProfile, clerkToken: string) 
         return profile;
     }
 };
-
 export const getUserProfile = async (clerkToken: string): Promise<UserProfile | null> => {
     try {
+        console.log("[v0] getUserProfile called");
         const response = await fetch(`${API_BASE}/profile`, {
             headers: { 'Authorization': `Bearer ${clerkToken}` }
         });
         
+        console.log("[v0] API response status:", response.status);
+        
         if (response.ok) {
             const data = await response.json();
+            console.log("[v0] Raw API response:", data);
+            console.log("[v0] resume_content from API:", data.resumeContent);
+            console.log("[v0] full_name from API:", data.fullName);
+            
             const profile = normalizeProfile(data);
+            console.log("[v0] Normalized profile:", profile);
+            
             if (profile) localStorage.setItem(LOCAL_PROFILE_KEY, JSON.stringify(profile));
             return profile;
         } else {
+            console.log("[v0] API returned non-ok status");
             return null;
         }
     } catch (e) {
+        console.log("[v0] getUserProfile error:", e);
         const cached = localStorage.getItem(LOCAL_PROFILE_KEY);
         return cached ? JSON.parse(cached) : null;
     }
 };
-
 export const fetchJobsFromDb = async (clerkToken: string): Promise<Job[]> => {
     try {
         const response = await fetch(`${API_BASE}/jobs`, {  // Changed this line
