@@ -416,9 +416,9 @@ export const InboxScanner: React.FC<InboxScannerProps> = ({
                   className="w-full pl-7 pr-2 py-1.5 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white text-slate-700 cursor-pointer"
                 >
                   <option value="3">Last 3 Days</option>
-                  <option value="7">Last 7 Days (Pro)</option>
-                  <option value="14">Last 14 Days (Pro)</option>
-                  <option value="30">Last 30 Days (Pro)</option>
+                  <option value="7">Last 7 Days </option>
+                  <option value="14">Last 14 Days </option>
+                  <option value="30">Last 30 Days </option>
                 </select>
               </div>
             </div>
